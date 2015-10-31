@@ -41,6 +41,7 @@ dependencies {
     compile 'com.android.support:appcompat-v7:23.1.0'
     compile 'com.android.support:design:23.1.0'
     compile 'com.kontakt.sdk.android:library:1.0.6'
+    compile 'com.parse:parse-android:1.10.3'
     compile 'org.scala-lang:scala-library:2.11.7'
 }
 

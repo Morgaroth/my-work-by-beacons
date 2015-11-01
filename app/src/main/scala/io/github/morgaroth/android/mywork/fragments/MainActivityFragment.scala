@@ -1,8 +1,9 @@
-package io.github.morgaroth.android.mywork
+package io.github.morgaroth.android.mywork.fragments
 
 import android.app.Fragment
 import android.os.Bundle
-import android.view.{ViewGroup, LayoutInflater, View}
+import android.view.{LayoutInflater, View, ViewGroup}
+import io.github.morgaroth.android.mywork.R
 
 class MainActivityFragment extends Fragment {
 

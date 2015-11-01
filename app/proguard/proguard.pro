@@ -1,0 +1,6 @@
+-dontwarn java.beans.**
+-dontwarn java.lang.**
+-dontwarn com.parse.**
+-dontwarn com.kontakt.**
+-dontwarn org.apache.http.**
+-dontwarn sun.**

@@ -6,9 +6,9 @@ import android.os.Bundle
 import android.support.design.widget.{FloatingActionButton, Snackbar}
 import android.view.{Menu, MenuItem, View}
 import io.github.morgaroth.android.mywork.R
-import io.github.morgaroth.android.mywork.fragments.BTFragment
+import io.github.morgaroth.android.mywork.fragments.{BeaconsFragment, BTFragment}
 import io.github.morgaroth.android.utilities.activities.smart
-import io.github.morgaroth.android.utilities.{FragmentContainer, SmartFragmentActivity}
+import io.github.morgaroth.android.utilities.{BluetoothUtils, FragmentContainer, SmartFragmentActivity}
 
 object MainActivity {
   val REQUEST_CODE_ENABLE_BLUETOOTH = 1
@@ -29,8 +29,6 @@ with BTFragment.Callbacks {
         Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show()
       }
     })
-
-
     //    if (!BluetoothUtils.isBluetoothEnabled) {
     //      log.info("bluetooth isn't enabled")
     //      val intent: Intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
@@ -39,7 +37,9 @@ with BTFragment.Callbacks {
     //      log.info("bluetooth is enabled")
     //      startService(Intent[BeaconMonitorService])
     //    }
-    loadInitialFragment(BTFragment.newInstance)
+    loadInitialFragment {
+      if (BluetoothUtils.isBluetoothEnabled) BeaconsFragment.newInstance else BTFragment.newInstance
+    }
   }
 
   override def onCreateOptionsMenu(menu: Menu): Boolean = {

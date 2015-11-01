@@ -34,14 +34,22 @@ class BTFragment extends SmartFragment {
     super.onCreateView(inflater, container, savedInstanceState)
     log.debug(s"creating fragment $this")
     if (BluetoothUtils.isBluetoothEnabled) {
-      inflater.inflate(R.layout.fragment_bt_enabled, container, false)
+      With(inflater.inflate(R.layout.fragment_bt_enabled, container, false)) { l =>
+        l.findBtn(R.id.button)
+          .map(_.setOnClickListener(() => fireBtEnabled()))
+          .getOrElse(log.warn("not found button in bt_disabled layout"))
+      }
     } else {
       With(inflater.inflate(R.layout.fragment_bt_disabled, container, false)) { l =>
-        l.findBtn(R.id.enable_funcking_bt_button)
+        l.findBtn(R.id.button)
           .map(_.setOnClickListener(() => BluetoothUtils.enableBT(this)))
           .getOrElse(log.warn("not found button in bt_disabled layout"))
       }
     }
+  }
+
+  def fireBtEnabled(): Unit = {
+    attached.map(_.BTEnabled()).getOrElse(log.warn("BT enabled, but fragment detached"))
   }
 
   override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent): Unit = {
@@ -68,7 +76,7 @@ class BTFragment extends SmartFragment {
     BluetoothUtils.handleBTEnabled(
     { _ =>
       log.info("bt enabled")
-      attached.map(_.BTEnabled()).getOrElse(log.warn("BT not enabled, but fragment detached"))
+      fireBtEnabled
     }, { _ =>
       log.info("BT not enabled")
       attached.map(_.BTNotEnabled()).getOrElse(log.warn("BT not enabled, but fragment detached"))

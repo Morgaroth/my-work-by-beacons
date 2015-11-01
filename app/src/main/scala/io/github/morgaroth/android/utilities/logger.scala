@@ -32,5 +32,5 @@ class MorgarothLogger(name: String) {
 }
 
 trait logger {
-  lazy val log = new MorgarothLogger(getClass.getName)
+  lazy val log = new MorgarothLogger(getClass.getSimpleName)
 }

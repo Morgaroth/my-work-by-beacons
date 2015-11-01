@@ -19,6 +19,7 @@ import io.github.morgaroth.android.utilities.{ImplicitContext, logger}
 import scala.util.Try
 
 class BeaconMonitorService extends Service with logger with ImplicitContext {
+  override implicit def implicitlyVisibleThisAsContext: Context = this
   private lazy val beaconManager = BeaconManager.newInstance(this)
   private final val binder: IBinder = new LocalBinder
   private lazy val timer = new Timer

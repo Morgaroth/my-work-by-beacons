@@ -13,15 +13,29 @@ import com.kontakt.sdk.android.factory.Filters
 import com.kontakt.sdk.android.manager.BeaconManager
 import com.kontakt.sdk.android.manager.BeaconManager.MonitoringListener
 import io.github.morgaroth.android.mywork.activities.MainActivity
+import io.github.morgaroth.android.mywork.logic.BeaconInTheAir
+import io.github.morgaroth.android.mywork.services.BeaconMonitorService.{BeaconsListener, BeaconMonitorBinder}
 import io.github.morgaroth.android.mywork.storage.{ParseManager, Work}
 import io.github.morgaroth.android.utilities.{ImplicitContext, logger}
 
 import scala.util.Try
 
+object BeaconMonitorService {
+
+  case class BeaconMonitorBinder(service: BeaconMonitorService) extends Binder
+
+  trait BeaconsListener {
+    def onBeacons(bcns: List[BeaconInTheAir])
+  }
+
+}
+
+
 class BeaconMonitorService extends Service with logger with ImplicitContext {
   override implicit def implicitlyVisibleThisAsContext: Context = this
+
   private lazy val beaconManager = BeaconManager.newInstance(this)
-  private final val binder: IBinder = new LocalBinder
+  private final val binder: IBinder = BeaconMonitorBinder(this)
   private lazy val timer = new Timer
 
   private var works = List.empty[Work]
@@ -47,6 +61,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
 
   private var rangingListener: BeaconManager.RangingListener = null
   private var monitoringListener: Option[MonitoringListener] = _
+  private var listeners: List[BeaconsListener] = List.empty
 
   def setRangingListener(rangingListener: BeaconManager.RangingListener) {
     this.rangingListener = rangingListener
@@ -58,6 +73,11 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
 
   def isConnectedToBeaconManager: Boolean = {
     beaconManager.isConnected
+  }
+
+
+  def addDataListener(l: BeaconsListener) = {
+    listeners ++= Seq(l)
   }
 
   @Nullable def onBind(intent: Intent): IBinder = {
@@ -89,6 +109,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
 
       def onBeaconAppeared(region: Region, beacon: BeaconDevice) {
         monitoringListener.foreach(_.onBeaconAppeared(region, beacon))
+        listeners.foreach(_.onBeacons(List(BeaconInTheAir(region, beacon))))
       }
 
       def onBeaconsUpdated(venue: Region, beacons: java.util.List[BeaconDevice]) {
@@ -98,6 +119,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
           log.debug("\t" + beaconDevice.getUniqueId + " " + beaconDevice.getMajor + " " + beaconDevice.getMinor)
         }
         monitoringListener.foreach(_.onBeaconsUpdated(venue, beacons))
+        listeners.foreach(_.onBeacons(beacons.map(BeaconInTheAir(venue, _)).toList))
       }
 
       def onRegionEntered(venue: Region) {

@@ -6,7 +6,7 @@ import android.os.Bundle
 import android.support.design.widget.{FloatingActionButton, Snackbar}
 import android.view.{Menu, MenuItem, View}
 import io.github.morgaroth.android.mywork.R
-import io.github.morgaroth.android.mywork.fragments.{BeaconsFragment, BTFragment}
+import io.github.morgaroth.android.mywork.fragments.{HelloFragment, BeaconsFragment, BTFragment}
 import io.github.morgaroth.android.utilities.activities.smart
 import io.github.morgaroth.android.utilities.{BluetoothUtils, FragmentContainer, SmartFragmentActivity}
 
@@ -29,14 +29,6 @@ with BTFragment.Callbacks {
         Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show()
       }
     })
-    //    if (!BluetoothUtils.isBluetoothEnabled) {
-    //      log.info("bluetooth isn't enabled")
-    //      val intent: Intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-    //      startActivityForResult(intent, MainActivity.REQUEST_CODE_ENABLE_BLUETOOTH)
-    //    } else {
-    //      log.info("bluetooth is enabled")
-    //      startService(Intent[BeaconMonitorService])
-    //    }
     loadInitialFragment {
       if (BluetoothUtils.isBluetoothEnabled) BeaconsFragment.newInstance else BTFragment.newInstance
     }
@@ -65,5 +57,11 @@ with BTFragment.Callbacks {
     super.onActivityResult(requestCode, resultCode, data)
   }
 
-  override def any(): String = "dupa"
+  override def BTEnabled(): Unit = {
+    replaceFragment(HelloFragment.newInstance)
+  }
+
+  override def BTNotEnabled(): Unit = {
+    // todo what if not enabled
+  }
 }

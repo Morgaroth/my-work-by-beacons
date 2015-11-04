@@ -5,7 +5,7 @@ import android.os.Bundle
 import android.view.{LayoutInflater, View, ViewGroup}
 import io.github.morgaroth.android.mywork.R
 import io.github.morgaroth.android.mywork.fragments.BTFragment.Callbacks
-import io.github.morgaroth.android.utilities.fragments.{FragmentCompanion, SmartFragment}
+import io.github.morgaroth.android.utilities.fragments.{AttachedActivity, FragmentCompanion, SmartFragment}
 import io.github.morgaroth.android.utilities.{BluetoothUtils, With}
 
 object BTFragment extends FragmentCompanion[BTFragment] {
@@ -19,10 +19,7 @@ object BTFragment extends FragmentCompanion[BTFragment] {
 
 }
 
-
-class BTFragment extends SmartFragment {
-
-  var attached: Option[Callbacks] = _
+class BTFragment extends SmartFragment with AttachedActivity[Callbacks] {
 
   override def onCreate(savedInstanceState: Bundle): Unit = {
     super.onCreate(savedInstanceState)
@@ -62,21 +59,13 @@ class BTFragment extends SmartFragment {
     enabled.orElse(a)((requestCode, resultCode, data))
   }
 
-  def onAttachFunction(context: Context): Unit = {
-    try {
-      attached = Some(context.asInstanceOf[BTFragment.Callbacks])
-      log.info(s"to $this attached $attached")
-    } catch {
-      case t: Throwable =>
-        log.error(s"attaching ${t.getMessage}")
-    }
-  }
+  override def attachActivity(ctx: Context): Callbacks = ctx.asInstanceOf[BTFragment.Callbacks]
 
   override def handleOnActivityResult: PartialFunction[(Int, Int, Intent), Unit] = {
     BluetoothUtils.handleBTEnabled(
     { _ =>
       log.info("bt enabled")
-      fireBtEnabled
+      fireBtEnabled()
     }, { _ =>
       log.info("BT not enabled")
       attached.map(_.BTNotEnabled()).getOrElse(log.warn("BT not enabled, but fragment detached"))

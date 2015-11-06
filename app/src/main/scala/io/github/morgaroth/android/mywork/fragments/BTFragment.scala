@@ -33,7 +33,9 @@ class BTFragment extends SmartFragment with AttachedActivity[Callbacks] {
     if (BluetoothUtils.isBluetoothEnabled) {
       With(inflater.inflate(R.layout.fragment_bt_enabled, container, false)) { l =>
         l.findBtn(R.id.button)
-          .map(_.setOnClickListener(() => fireBtEnabled()))
+          .map(_.setOnClickListener(() => {
+            attached.map(_.BTEnabled()).getOrElse(log.warn("BT enabled, but fragment detached"))
+          }))
           .getOrElse(log.warn("not found button in bt_disabled layout"))
       }
     } else {
@@ -45,19 +47,15 @@ class BTFragment extends SmartFragment with AttachedActivity[Callbacks] {
     }
   }
 
-  def fireBtEnabled(): Unit = {
-    attached.map(_.BTEnabled()).getOrElse(log.warn("BT enabled, but fragment detached"))
-  }
-
-  override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent): Unit = {
-    val a: PartialFunction[(Int, Int, Intent), Unit] = PartialFunction {
-      case (req, res, d) => super.onActivityResult(requestCode, resultCode, d): Unit
-    }
-    val enabled: PartialFunction[(Int, Int, Intent), Unit] = BluetoothUtils.handleBTEnabled(
-    { _ => log.info("bt enabled") }, { _ => log.info("BT not enabled") }
-    )
-    enabled.orElse(a)((requestCode, resultCode, data))
-  }
+  //  override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent): Unit = {
+  //    val a: PartialFunction[(Int, Int, Intent), Unit] = PartialFunction {
+  //      case (req, res, d) => super.onActivityResult(requestCode, resultCode, d): Unit
+  //    }
+  //    val enabled: PartialFunction[(Int, Int, Intent), Unit] = BluetoothUtils.handleBTEnabled(
+  //    { _ => log.info("bt enabled") }, { _ => log.info("BT not enabled") }
+  //    )
+  //    enabled.orElse(a)((requestCode, resultCode, data))
+  //  }
 
   override def attachActivity(ctx: Context): Callbacks = ctx.asInstanceOf[BTFragment.Callbacks]
 
@@ -65,7 +63,7 @@ class BTFragment extends SmartFragment with AttachedActivity[Callbacks] {
     BluetoothUtils.handleBTEnabled(
     { _ =>
       log.info("bt enabled")
-      fireBtEnabled()
+      attached.map(_.BTEnabled()).getOrElse(log.warn("BT enabled, but fragment detached"))
     }, { _ =>
       log.info("BT not enabled")
       attached.map(_.BTNotEnabled()).getOrElse(log.warn("BT not enabled, but fragment detached"))

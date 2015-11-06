@@ -15,7 +15,7 @@ object MainActivity {
 }
 
 class MainActivity extends Activity with smart with SmartFragmentActivity
-with BTFragment.Callbacks {
+with BTFragment.Callbacks with HelloFragment.Callbacks with BeaconsFragment.Callbacks {
 
   implicit lazy val container = FragmentContainer(R.id.container)
 
@@ -58,10 +58,26 @@ with BTFragment.Callbacks {
   }
 
   override def BTEnabled(): Unit = {
+    log.info("user enabled BT")
     replaceFragment(HelloFragment.newInstance)
   }
 
   override def BTNotEnabled(): Unit = {
     // todo what if not enabled
+    log.info("user NOT enabled BT")
+  }
+
+  protected override def onNewIntent(intent: Intent) = {
+    super.onNewIntent(intent)
+    log.info(s"onIntent $intent")
+  }
+
+  override def wantBeacons(): Unit = {
+    log.info("user wants beacons")
+    replaceFragment(BeaconsFragment.newInstance)
+  }
+
+  override def wantWorks(): Unit = {
+    log.info("user wants works")
   }
 }

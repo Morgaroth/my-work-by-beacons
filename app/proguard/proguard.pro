@@ -4,3 +4,4 @@
 -dontwarn com.kontakt.**
 -dontwarn org.apache.http.**
 -dontwarn sun.**
+-keepclasseswithmembernames class io.github.morgaroth.android.mywork.** {*;}

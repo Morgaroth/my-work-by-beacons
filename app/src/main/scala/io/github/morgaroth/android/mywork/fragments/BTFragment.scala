@@ -32,17 +32,13 @@ class BTFragment extends SmartFragment with AttachedActivity[Callbacks] {
     log.debug(s"creating fragment $this")
     if (BluetoothUtils.isBluetoothEnabled) {
       With(inflater.inflate(R.layout.fragment_bt_enabled, container, false)) { l =>
-        l.findBtn(R.id.button)
-          .map(_.setOnClickListener(() => {
-            attached.map(_.BTEnabled()).getOrElse(log.warn("BT enabled, but fragment detached"))
-          }))
-          .getOrElse(log.warn("not found button in bt_disabled layout"))
+        l.findBtn(R.id.button).setOnClickListener(() => {
+          attached.map(_.BTEnabled()).getOrElse(log.warn("BT enabled, but fragment detached"))
+        })
       }
     } else {
       With(inflater.inflate(R.layout.fragment_bt_disabled, container, false)) { l =>
-        l.findBtn(R.id.button)
-          .map(_.setOnClickListener(() => BluetoothUtils.enableBT(this)))
-          .getOrElse(log.warn("not found button in bt_disabled layout"))
+        l.findBtn(R.id.button).setOnClickListener(() => BluetoothUtils.enableBT(this))
       }
     }
   }

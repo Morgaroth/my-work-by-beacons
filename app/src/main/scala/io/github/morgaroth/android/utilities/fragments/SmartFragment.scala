@@ -12,10 +12,12 @@ import io.github.morgaroth.android.utilities.{BluetoothUtils, ImplicitContext, l
 import scala.language.implicitConversions
 
 class ViewFactory(v: View) {
-  def findBtn(id: Int) = Option(v.findViewById(id).asInstanceOf[Button])
+  def findBtn(id: Int) = v.findViewById(id).asInstanceOf[Button]
 
   def findText(id: Int) = v.findViewById(id).asInstanceOf[TextView]
 }
+
+
 
 trait SmartFragment extends Fragment with ImplicitContext with logger {
   override implicit def implicitlyVisibleThisAsContext: Context = getActivity

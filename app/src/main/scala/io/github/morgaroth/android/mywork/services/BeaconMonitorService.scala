@@ -34,6 +34,8 @@ object BeaconMonitorService {
 
 
 class BeaconMonitorService extends Service with logger with ImplicitContext {
+  log.info("beacon monitor service instantiated")
+
   override implicit def implicitlyVisibleThisAsContext: Context = this
 
   private lazy val beaconManager = BeaconManager.newInstance(this)

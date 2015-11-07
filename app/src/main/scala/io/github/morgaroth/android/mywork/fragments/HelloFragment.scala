@@ -24,8 +24,8 @@ class HelloFragment extends SmartFragment with AttachedActivity[Callbacks] {
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup, savedInstanceState: Bundle): View = {
     super.onCreateView(inflater, container, savedInstanceState)
     With(inflater.inflate(R.layout.fragment_hello, container, false)) { l =>
-      l.findBtn(R.id.go_beacons).map(_.setOnClickListener(() => attached.foreach(_.wantBeacons())))
-      l.findBtn(R.id.go_works).map(_.setOnClickListener(() => attached.foreach(_.wantWorks())))
+      l.findBtn(R.id.go_beacons).setOnClickListener(() => attached.foreach(_.wantBeacons()))
+      l.findBtn(R.id.go_works).setOnClickListener(() => attached.foreach(_.wantWorks()))
     }
   }
 

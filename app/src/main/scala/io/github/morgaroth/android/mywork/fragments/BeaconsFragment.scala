@@ -22,7 +22,7 @@ object BeaconsFragment extends FragmentCompanion[BeaconsFragment] {
 
 class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] {
 
-  var connectedService: Option[BeaconMonitorBinder] = _
+  var connectedService: BeaconMonitorBinder = _
 
   val connection = new ServiceConnection {
     override def onServiceDisconnected(name: ComponentName): Unit = {
@@ -31,26 +31,29 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] {
 
     override def onServiceConnected(name: ComponentName, service: IBinder): Unit = {
       log.info(s"connected to service $name, service $service")
-      connectedService = Some(service.asInstanceOf[BeaconMonitorBinder])
-      connectedService.foreach(_.service.addDataListener(new BeaconsListener {
+      connectedService = service.asInstanceOf[BeaconMonitorBinder]
+      connectedService.service.addDataListener(new BeaconsListener {
         override def onBeacons(bcns: List[BeaconInTheAir]): Unit = {
           log.info(s"beacons on the air $bcns")
-          t.foreach(_.setText(s"found ${bcns.size} beacons"))
+          t.setText(s"found ${bcns.size} beacons")
         }
-      }))
+      })
     }
   }
 
-  var t: Option[TextView] = _
+  var t: TextView = _
 
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup, savedInstanceState: Bundle): View = {
     super.onCreateView(inflater, container, savedInstanceState)
 
     val intent = new Intent(getActivity, classOf[BeaconMonitorService])
-    getActivity.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+//    val r = getActivity.startService(intent)
+//    log.info(s"starting service end with $r")
+    val e = getActivity.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    log.info(s"binding service end with $e")
 
     With(inflater.inflate(R.layout.fragment_beacons, container, false)) { l =>
-      t = Some(l.findText(R.id.container))
+      t = l.findText(R.id.container)
     }
   }
 

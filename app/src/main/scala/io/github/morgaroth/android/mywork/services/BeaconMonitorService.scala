@@ -94,13 +94,13 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
     super.onCreate()
     log.debug("onCreate")
 
-    // ??
-    List(4506, 38100, 44830, 17527).foreach { filter =>
-      beaconManager.addFilter(Filters.newMajorFilter(filter))
-    }
+//    // ??
+//    List(4506, 38100, 44830, 17527).foreach { filter =>
+//      beaconManager.addFilter(Filters.newMajorFilter(filter))
+//    }
 
-    beaconManager.setMonitorPeriod(new MonitorPeriod(10.seconds.toMillis, 10.minutes.toMillis))
-    beaconManager.setScanMode(BeaconManager.SCAN_MODE_LOW_LATENCY)
+    beaconManager.setMonitorPeriod(new MonitorPeriod(10.seconds.toMillis, 1.minutes.toMillis))
+    beaconManager.setScanMode(BeaconManager.SCAN_MODE_LOW_POWER)
     beaconManager.registerMonitoringListener(new MonitoringListener() {
       def onMonitorStart() {
         log.debug("onMonitorStart")
@@ -114,6 +114,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
       }
 
       def onBeaconAppeared(region: Region, beacon: BeaconDevice) {
+        log.debug("onBeaconAppeared")
         //        monitoringListener.foreach(_.onBeaconAppeared(region, beacon))
         listeners.foreach(_.onBeacons(List(BeaconInTheAir(region, beacon))))
       }
@@ -264,7 +265,5 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
     idCounter += 1
     notificationBuilder.addAction(R.drawable.abc_btn_check_material, "ENABLE", pendingIntentShort)
     notificationManager.notify(idCounter, notificationBuilder.build())
-
-
   }
 }

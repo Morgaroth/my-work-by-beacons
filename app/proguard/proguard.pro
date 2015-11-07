@@ -3,5 +3,6 @@
 -dontwarn com.parse.**
 -dontwarn com.kontakt.**
 -dontwarn org.apache.http.**
+-dontwarn org.apache.log4j.**
 -dontwarn sun.**
 -keepclasseswithmembernames class io.github.morgaroth.android.mywork.** {*;}

@@ -55,9 +55,9 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] {
     super.onCreateView(inflater, container, savedInstanceState)
 
     val intent = new Intent(getActivity, classOf[BeaconMonitorService])
-    //    val r = getActivity.startService(intent)
-    //    log.info(s"starting service end with $r")
-    val e = getActivity.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    val r = getActivity.startService(intent)
+    log.info(s"starting service end with $r")
+    val e = getActivity.bindService(intent, connection, 0)
     log.info(s"binding service end with $e")
 
     With(inflater.inflate(R.layout.fragment_beacons, container, false)) { l =>

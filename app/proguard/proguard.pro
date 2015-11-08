@@ -5,4 +5,6 @@
 -dontwarn org.apache.http.**
 -dontwarn org.apache.log4j.**
 -dontwarn sun.**
+-printmapping mapping.txt
+-keepclassmembers class com.parse.ParseRole { <init>(); }
 -keepclasseswithmembernames class io.github.morgaroth.android.mywork.** {*;}

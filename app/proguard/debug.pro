@@ -1,6 +1,6 @@
 -keepattributes SourceFile,LineNumberTable
 #,InnerClass,EnclosingMethod
-#-dontobfuscate
+-dontobfuscate
 #-keepattributes Exceptions,InnerClasses,Signature,Deprecated,?
 #                SourceFile,LineNumberTable,*Annotation*,EnclosingMethod
 #-dontoptimize

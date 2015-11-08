@@ -91,6 +91,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
   }
 
   @Nullable def onBind(intent: Intent): IBinder = {
+    log.debug("onBind")
     binder
   }
 

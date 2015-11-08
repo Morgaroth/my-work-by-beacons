@@ -37,6 +37,14 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] {
           log.info(s"beacons on the air $bcns")
           t.setText(s"found ${bcns.size} beacons")
         }
+
+        override def startMonitoring: Unit = {
+          log.info("started beacons monitoring")
+        }
+
+        override def stopMonitoring: Unit = {
+          log.info("stopped beacons monitoring")
+        }
       })
     }
   }
@@ -47,8 +55,8 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] {
     super.onCreateView(inflater, container, savedInstanceState)
 
     val intent = new Intent(getActivity, classOf[BeaconMonitorService])
-//    val r = getActivity.startService(intent)
-//    log.info(s"starting service end with $r")
+    //    val r = getActivity.startService(intent)
+    //    log.info(s"starting service end with $r")
     val e = getActivity.bindService(intent, connection, Context.BIND_AUTO_CREATE)
     log.info(s"binding service end with $e")
 
@@ -59,7 +67,7 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] {
 
 
   override def onDestroyView(): Unit = {
-    //    connectedService.foreach(_ => getActivity.unbindService(connection))
+    getActivity.unbindService(connection)
     super.onDestroyView()
   }
 

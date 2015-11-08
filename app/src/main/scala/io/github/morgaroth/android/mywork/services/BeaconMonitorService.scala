@@ -28,6 +28,10 @@ object BeaconMonitorService {
 
   trait BeaconsListener {
     def onBeacons(bcns: List[BeaconInTheAir])
+
+    def startMonitoring: Unit
+
+    def stopMonitoring: Unit
   }
 
 }
@@ -94,10 +98,10 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
     super.onCreate()
     log.debug("onCreate")
 
-//    // ??
-//    List(4506, 38100, 44830, 17527).foreach { filter =>
-//      beaconManager.addFilter(Filters.newMajorFilter(filter))
-//    }
+    //    // ??
+    //    List(4506, 38100, 44830, 17527).foreach { filter =>
+    //      beaconManager.addFilter(Filters.newMajorFilter(filter))
+    //    }
 
     beaconManager.setMonitorPeriod(new MonitorPeriod(10.seconds.toMillis, 1.minutes.toMillis))
     beaconManager.setScanMode(BeaconManager.SCAN_MODE_LOW_POWER)
@@ -105,12 +109,12 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
       def onMonitorStart() {
         log.debug("onMonitorStart")
         // DO STH WHEN MONITOR STARTED
-        //        monitoringListener.foreach(_.onMonitorStart())
+        listeners.foreach(_.startMonitoring)
       }
 
       def onMonitorStop() {
         log.debug("onMonitorStop")
-        //        monitoringListener.foreach(_.onMonitorStop())
+        listeners.foreach(_.stopMonitoring)
       }
 
       def onBeaconAppeared(region: Region, beacon: BeaconDevice) {
@@ -198,7 +202,9 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
   override def onDestroy() {
     super.onDestroy()
     log.debug("onDestroy")
-    beaconManager.stopMonitoring()
+    if(beaconManager.isConnected) {
+      beaconManager.stopMonitoring()
+    }
     beaconManager.disconnect()
     timer.cancel()
   }

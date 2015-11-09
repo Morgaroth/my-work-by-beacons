@@ -106,7 +106,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
     //    }
 
 
-    beaconManager.setMonitorPeriod(new MonitorPeriod(10.seconds.toMillis, 1.minutes.toMillis))
+    beaconManager.setMonitorPeriod(new MonitorPeriod(60.seconds.toMillis, 10.seconds.toMillis))
     beaconManager.setScanMode(BeaconManager.SCAN_MODE_LOW_POWER)
     beaconManager.registerMonitoringListener(new MonitoringListener() {
       def onMonitorStart() {

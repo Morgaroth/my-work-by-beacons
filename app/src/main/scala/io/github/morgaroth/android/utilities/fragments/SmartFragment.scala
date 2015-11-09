@@ -17,12 +17,13 @@ class ViewFactory(v: View) {
   def findText(id: Int) = v.findViewById(id).asInstanceOf[TextView]
 }
 
+trait ViewManaging {
+  implicit def wrapToViewFactory(v: View): ViewFactory = new ViewFactory(v)
+}
 
-
-trait SmartFragment extends Fragment with ImplicitContext with logger {
+trait SmartFragment extends Fragment with ImplicitContext with logger with ViewManaging {
   override implicit def implicitlyVisibleThisAsContext: Context = getActivity
 
-  implicit def wrapToViewFactory(v: View): ViewFactory = new ViewFactory(v)
 
   //  implicit def convertAnonymousFunctionToViewOnClickListener(fun: => Unit): OnClickListener = new OnClickListener {
   //    override def onClick(v: View): Unit = fun

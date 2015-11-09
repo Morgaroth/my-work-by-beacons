@@ -3,14 +3,15 @@ package io.github.morgaroth.android.mywork.services
 import java.util.{Timer, TimerTask}
 
 import android.app.{Notification, NotificationManager, PendingIntent, Service}
-import android.content.{Context, Intent}
+import android.bluetooth.{BluetoothAdapter, BluetoothManager}
+import android.content.{IntentFilter, BroadcastReceiver, Context, Intent}
 import android.os.{Binder, IBinder, RemoteException}
 import android.support.annotation.Nullable
 import com.kontakt.sdk.android.configuration.MonitorPeriod
 import com.kontakt.sdk.android.connection.OnServiceBoundListener
 import com.kontakt.sdk.android.device.{BeaconDevice, Region}
 import com.kontakt.sdk.android.factory.Filters
-import com.kontakt.sdk.android.manager.BeaconManager
+import com.kontakt.sdk.android.manager.{ActionController, BeaconManager}
 import com.kontakt.sdk.android.manager.BeaconManager.MonitoringListener
 import io.github.morgaroth.android.mywork.R
 import io.github.morgaroth.android.mywork.activities.MainActivity
@@ -29,7 +30,7 @@ object BeaconMonitorService {
   trait BeaconsListener {
     def onBeacons(bcns: List[BeaconInTheAir])
 
-    def startMonitoring: Unit
+    def monitoringStarted: Unit
 
     def stopMonitoring: Unit
   }
@@ -104,13 +105,14 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
     //      beaconManager.addFilter(Filters.newMajorFilter(filter))
     //    }
 
+
     beaconManager.setMonitorPeriod(new MonitorPeriod(10.seconds.toMillis, 1.minutes.toMillis))
     beaconManager.setScanMode(BeaconManager.SCAN_MODE_LOW_POWER)
     beaconManager.registerMonitoringListener(new MonitoringListener() {
       def onMonitorStart() {
         log.debug("onMonitorStart")
         // DO STH WHEN MONITOR STARTED
-        listeners.foreach(_.startMonitoring)
+        listeners.foreach(_.monitoringStarted)
       }
 
       def onMonitorStop() {
@@ -198,12 +200,35 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
         //        monitoringListener.foreach(_.onRegionAbandoned(venue))
       }
     })
+    beaconManager.isBluetoothEnabled
+    val mReceiver = new BroadcastReceiver() {
+      override def onReceive(context: Context, intent: Intent) {
+        val action = intent.getAction
+
+        if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+          val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
+          state match {
+            case BluetoothAdapter.STATE_OFF =>
+              log.info("Bluetooth off")
+            case BluetoothAdapter.STATE_TURNING_OFF =>
+              log.info("Turning Bluetooth off...")
+            case BluetoothAdapter.STATE_ON =>
+              log.info("Bluetooth on")
+            case BluetoothAdapter.STATE_TURNING_ON =>
+              log.info("Turning Bluetooth on...")
+          }
+        }
+      }
+    }
+    // Register for broadcasts on BluetoothAdapter state change
+    val filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+    registerReceiver(mReceiver, filter)
   }
 
   override def onDestroy() {
     super.onDestroy()
     log.debug("onDestroy")
-    if(beaconManager.isConnected) {
+    if (beaconManager.isConnected) {
       beaconManager.stopMonitoring()
     }
     beaconManager.disconnect()
@@ -218,19 +243,22 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
   @throws(classOf[RemoteException])
   private def loadInitialData() {
     works = loadWorks
+    beaconManager.startMonitoring()
   }
 
   def loadWorks: List[Work] = {
     val triedWorks: Try[List[Work]] = ParseManager.works
     triedWorks.failed.map { t =>
-      log.error("loading works failed", t)
+      //      log.error("loading works failed", t)
     }
+    //    log.info(s"loaded works $triedWorks")
     triedWorks.getOrElse(List.empty)
   }
 
   private def scheduleDataRefresh() {
     timer.schedule(new TimerTask() {
       def run() {
+        //        log.info("running timer shadule")
         works = loadWorks
       }
     }, 5000, 5000)

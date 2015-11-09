@@ -38,7 +38,7 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] {
           t.setText(s"found ${bcns.size} beacons")
         }
 
-        override def startMonitoring: Unit = {
+        override def monitoringStarted: Unit = {
           log.info("started beacons monitoring")
         }
 

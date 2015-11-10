@@ -1,5 +1,6 @@
 package io.github.morgaroth.android.mywork.services
 
+import java.util
 import java.util.{Timer, TimerTask}
 
 import android.app.{Notification, NotificationManager, PendingIntent, Service}
@@ -12,7 +13,7 @@ import com.kontakt.sdk.android.connection.OnServiceBoundListener
 import com.kontakt.sdk.android.device.{BeaconDevice, Region}
 import com.kontakt.sdk.android.factory.Filters
 import com.kontakt.sdk.android.manager.{ActionController, BeaconManager}
-import com.kontakt.sdk.android.manager.BeaconManager.MonitoringListener
+import com.kontakt.sdk.android.manager.BeaconManager.{RangingListener, MonitoringListener}
 import io.github.morgaroth.android.mywork.R
 import io.github.morgaroth.android.mywork.activities.MainActivity
 import io.github.morgaroth.android.mywork.logic.BeaconInTheAir
@@ -105,9 +106,16 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
     //      beaconManager.addFilter(Filters.newMajorFilter(filter))
     //    }
 
-
+    import scala.collection.JavaConversions._
     beaconManager.setMonitorPeriod(new MonitorPeriod(60.seconds.toMillis, 10.seconds.toMillis))
     beaconManager.setScanMode(BeaconManager.SCAN_MODE_LOW_POWER)
+    beaconManager.registerRangingListener(new RangingListener {
+      override def onBeaconsDiscovered(venue: Region, beacons: util.List[BeaconDevice]): Unit = {
+        log.debug("on beacons discovered")
+        log.info(venue.toString + beacons.toList.toString)
+        listeners.foreach(_.onBeacons(beacons.map(BeaconInTheAir(venue, _)).toList))
+      }
+    })
     beaconManager.registerMonitoringListener(new MonitoringListener() {
       def onMonitorStart() {
         log.debug("onMonitorStart")

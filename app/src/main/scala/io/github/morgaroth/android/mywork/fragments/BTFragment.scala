@@ -43,16 +43,6 @@ class BTFragment extends SmartFragment with AttachedActivity[Callbacks] {
     }
   }
 
-  //  override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent): Unit = {
-  //    val a: PartialFunction[(Int, Int, Intent), Unit] = PartialFunction {
-  //      case (req, res, d) => super.onActivityResult(requestCode, resultCode, d): Unit
-  //    }
-  //    val enabled: PartialFunction[(Int, Int, Intent), Unit] = BluetoothUtils.handleBTEnabled(
-  //    { _ => log.info("bt enabled") }, { _ => log.info("BT not enabled") }
-  //    )
-  //    enabled.orElse(a)((requestCode, resultCode, data))
-  //  }
-
   override def attachActivity(ctx: Context): Callbacks = ctx.asInstanceOf[BTFragment.Callbacks]
 
   override def handleOnActivityResult: PartialFunction[(Int, Int, Intent), Unit] = {

@@ -1,7 +1,7 @@
 package io.github.morgaroth.android.mywork.storage
 
 import com.kontakt.sdk.android.device.BeaconDevice
-import com.parse.{ParseObject, ParseQuery}
+import com.parse.{ParseClassName, ParseObject, ParseQuery}
 
 import scala.collection.JavaConversions._
 import scala.util.Try
@@ -16,7 +16,7 @@ object Beacon {
   }
 }
 
-//@ParseClassName("Beacon")
+@ParseClassName("Beacon")
 class Beacon extends ParseObject {
 
   def beaconId: String = getString("beaconId")
@@ -55,6 +55,7 @@ object Work {
   }
 }
 
+@ParseClassName("Work")
 class Work extends ParseObject {
 
   import Work._
@@ -66,7 +67,7 @@ class Work extends ParseObject {
   }
 
   object InWorks {
-    def apply = Work.this.getList[Long](timestamps_field).toList
+    def apply = Option(Work.this.getList[Long](timestamps_field)).map(_.toList).getOrElse(List.empty)
 
     def +=(timestamps: List[Long]): Unit = Work.this.addAll(timestamps_field, timestamps)
 
@@ -74,7 +75,7 @@ class Work extends ParseObject {
   }
 
   object Determinants {
-    def apply: List[Beacon] = Work.this.getList[Beacon](determinants_field).toList
+    def apply: List[Beacon] = Option(Work.this.getList[Beacon](determinants_field)).map(_.toList).getOrElse(List.empty)
 
     def +=(beacon: Beacon) = Work.this.add(determinants_field, beacon)
   }

@@ -7,7 +7,7 @@ import android.support.design.widget.{FloatingActionButton, Snackbar}
 import android.view.{Menu, MenuItem, View}
 import android.widget.Toolbar
 import io.github.morgaroth.android.mywork.R
-import io.github.morgaroth.android.mywork.fragments.{HelloFragment, BeaconsFragment, BTFragment}
+import io.github.morgaroth.android.mywork.fragments.{WorksFragment, HelloFragment, BeaconsFragment, BTFragment}
 import io.github.morgaroth.android.utilities.activities.smart
 import io.github.morgaroth.android.utilities.{BluetoothUtils, FragmentContainer, SmartFragmentActivity}
 
@@ -16,7 +16,7 @@ object MainActivity {
 }
 
 class MainActivity extends Activity with smart with SmartFragmentActivity
-with BTFragment.Callbacks with HelloFragment.Callbacks with BeaconsFragment.Callbacks {
+with BTFragment.Callbacks with HelloFragment.Callbacks with BeaconsFragment.Callbacks with WorksFragment.Callbacks {
 
   implicit lazy val container = FragmentContainer(R.id.container)
 
@@ -32,7 +32,7 @@ with BTFragment.Callbacks with HelloFragment.Callbacks with BeaconsFragment.Call
       }
     })
     loadInitialFragment {
-      if (BluetoothUtils.isBluetoothEnabled) BeaconsFragment.newInstance else BTFragment.newInstance
+      if (BluetoothUtils.isBluetoothEnabled) HelloFragment.newInstance else BTFragment.newInstance
     }
   }
 
@@ -81,5 +81,8 @@ with BTFragment.Callbacks with HelloFragment.Callbacks with BeaconsFragment.Call
 
   override def wantWorks(): Unit = {
     log.info("user wants works")
+    replaceFragment(WorksFragment.newInstance)
   }
+
+  override def nothing(): Unit = {}
 }

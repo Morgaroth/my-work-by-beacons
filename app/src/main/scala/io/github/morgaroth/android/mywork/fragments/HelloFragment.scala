@@ -5,12 +5,12 @@ import android.os.Bundle
 import android.view.{LayoutInflater, View, ViewGroup}
 import io.github.morgaroth.android.mywork.R
 import io.github.morgaroth.android.mywork.fragments.HelloFragment.Callbacks
-import io.github.morgaroth.android.utilities.fragments.{AttachedActivity, SmartFragment}
-import io.github.morgaroth.android.utilities.{With, fragments}
+import io.github.morgaroth.android.utilities.fragments.{FragmentCompanion, AttachedActivity, SmartFragment}
+import io.github.morgaroth.android.utilities.With
 
 
-object HelloFragment extends fragments.FragmentCompanion[HelloFragment] {
-  def newInstance = new BeaconsFragment
+object HelloFragment extends FragmentCompanion[HelloFragment] {
+  def newInstance = new HelloFragment
 
   trait Callbacks {
     def wantBeacons(): Unit

@@ -169,7 +169,7 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
 
     knownBeacons = loadBeacons(loadWorks)
 
-    With(inflater.inflate(R.layout.fragment_beacons, container, false)) { l =>
+    With(inflater.inflate(R.layout.fragment_recycler_view, container, false)) { l =>
       val rv = l.findViewById(R.id.my_recycler_view).asInstanceOf[RecyclerView]
       adapter = new Adapter(rv, this)
       rv.setHasFixedSize(true)

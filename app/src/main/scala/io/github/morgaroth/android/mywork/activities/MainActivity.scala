@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.support.design.widget.{FloatingActionButton, Snackbar}
 import android.view.{Menu, MenuItem, View}
+import android.widget.Toolbar
 import io.github.morgaroth.android.mywork.R
 import io.github.morgaroth.android.mywork.fragments.{HelloFragment, BeaconsFragment, BTFragment}
 import io.github.morgaroth.android.utilities.activities.smart
@@ -22,6 +23,7 @@ with BTFragment.Callbacks with HelloFragment.Callbacks with BeaconsFragment.Call
   protected override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
+    setActionBar(findViewById(R.id.toolbar).asInstanceOf[Toolbar])
 
     val fab: FloatingActionButton = findViewById(R.id.fab).asInstanceOf[FloatingActionButton]
     fab.setOnClickListener(new View.OnClickListener() {

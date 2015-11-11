@@ -266,7 +266,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
   private def scheduleDataRefresh() {
     timer.schedule(new TimerTask() {
       def run() {
-        //        log.info("running timer shadule")
+        //        log.info("running timer shedule")
         works = loadWorks
       }
     }, 5000, 5000)

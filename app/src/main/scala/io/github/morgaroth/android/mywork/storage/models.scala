@@ -1,17 +1,28 @@
 package io.github.morgaroth.android.mywork.storage
 
-import com.parse.{ParseQuery, ParseObject}
+import com.kontakt.sdk.android.device.BeaconDevice
+import com.parse.{ParseObject, ParseQuery}
 
 import scala.collection.JavaConversions._
 import scala.util.Try
 
+object Beacon {
+  def from(i: BeaconDevice) = {
+    val b = new Beacon
+    b.beaconId = i.getUniqueId
+    b.minor = i.getMinor
+    b.major = i.getMajor
+    b
+  }
+}
+
 //@ParseClassName("Beacon")
 class Beacon extends ParseObject {
 
-  def uuid: String = getString("proximityUUID")
+  def beaconId: String = getString("beaconId")
 
-  def uuid_=(proximityUUID: String) {
-    put("proximityUUID", proximityUUID)
+  def beaconId_=(beaconId: String) {
+    put("beaconId", beaconId)
   }
 
   def major: Int = getInt("major")
@@ -59,11 +70,11 @@ class Work extends ParseObject {
 
     def +=(timestamps: List[Long]): Unit = Work.this.addAll(timestamps_field, timestamps)
 
-    def +=(timestamp: Long):Unit = this += List(timestamp)
+    def +=(timestamp: Long): Unit = this += List(timestamp)
   }
 
   object Determinants {
-    def apply = Work.this.getList[Beacon](determinants_field).toList
+    def apply: List[Beacon] = Work.this.getList[Beacon](determinants_field).toList
 
     def +=(beacon: Beacon) = Work.this.add(determinants_field, beacon)
   }

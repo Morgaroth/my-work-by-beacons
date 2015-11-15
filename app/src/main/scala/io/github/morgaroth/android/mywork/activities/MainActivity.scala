@@ -7,7 +7,8 @@ import android.support.design.widget.{FloatingActionButton, Snackbar}
 import android.view.{Menu, MenuItem, View}
 import android.widget.Toolbar
 import io.github.morgaroth.android.mywork.R
-import io.github.morgaroth.android.mywork.fragments.{WorksFragment, HelloFragment, BeaconsFragment, BTFragment}
+import io.github.morgaroth.android.mywork.fragments._
+import io.github.morgaroth.android.mywork.storage.Work
 import io.github.morgaroth.android.utilities.activities.smart
 import io.github.morgaroth.android.utilities.{BluetoothUtils, FragmentContainer, SmartFragmentActivity}
 
@@ -43,11 +44,11 @@ with BTFragment.Callbacks with HelloFragment.Callbacks with BeaconsFragment.Call
   }
 
   override def handleOptionsMenuItemSelected = {
-        case R.id.action_load_beacons =>
-          replaceFragment(BeaconsFragment.newInstance)
-        case R.id.action_load_works =>
-          replaceFragment(WorksFragment.newInstance)
-      }
+    case R.id.action_load_beacons =>
+      replaceFragment(BeaconsFragment.newInstance)
+    case R.id.action_load_works =>
+      replaceFragment(WorksFragment.newInstance)
+  }
 
   def bindBeaconMonitor = {
     log.info("binding to beaconsmonitor")
@@ -88,5 +89,7 @@ with BTFragment.Callbacks with HelloFragment.Callbacks with BeaconsFragment.Call
     replaceFragment(WorksFragment.newInstance)
   }
 
-  override def nothing(): Unit = {}
+  override def loadWorkDetails(w: Work): Unit = {
+    replaceFragment(WorkDetailsFragment.newInstance(w))
+  }
 }

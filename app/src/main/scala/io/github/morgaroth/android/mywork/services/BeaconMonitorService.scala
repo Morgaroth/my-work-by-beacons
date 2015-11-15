@@ -50,12 +50,13 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
 
   override implicit def implicitlyVisibleThisAsContext: Context = this
 
-  private lazy val beaconManager = BeaconManager.newInstance(this)
+  private var beaconManager: BeaconManager = _
   private final val binder: IBinder = BeaconMonitorBinder(this)
   private lazy val timer = new Timer
   private var listeners: List[BeaconsListener] = List.empty
   private var idCounter: Int = 0
   private var pendingIntentCounter: Int = 0
+  private var monitoringPeriod: MonitorPeriod = SpyMonitoringPeriod
   val worksListener = new BeaconsListener {
     override def monitoringStopped: Unit = {}
 
@@ -81,25 +82,17 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
   }
 
   def endExploringBeacons(l: BeaconsListener) = {
+    log.info("onExploringStop")
     removeDataListener(l)
-    if (isConnectedToBeaconManager) {
-      beaconManager.stopMonitoring()
-      beaconManager.setMonitorPeriod(SpyMonitoringPeriod)
-      beaconManager.startMonitoring()
-    } else {
-      beaconManager.setMonitorPeriod(SpyMonitoringPeriod)
-    }
+    monitoringPeriod = SpyMonitoringPeriod
+    reloadService()
   }
 
   def exploreBeacons(l: BeaconsListener) = {
+    log.info("onExploringStart")
     addDataListener(l)
-    if (isConnectedToBeaconManager) {
-      beaconManager.stopMonitoring()
-      beaconManager.setMonitorPeriod(ExploreMonitoringPeriod)
-      beaconManager.startMonitoring()
-    } else {
-      beaconManager.setMonitorPeriod(ExploreMonitoringPeriod)
-    }
+    monitoringPeriod = ExploreMonitoringPeriod
+    reloadService()
   }
 
   def addDataListener(l: BeaconsListener) = {
@@ -120,7 +113,113 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
     log.debug("onCreate")
     //    beaconManager.setMonitorPeriod(SpyMonitoringPeriod)
     listeners ++= Seq(worksListener)
-    beaconManager.setMonitorPeriod(SpyMonitoringPeriod)
+    registerBTStateMonitor()
+  }
+
+  def registerBTStateMonitor(): Unit = {
+    val mReceiver = new BroadcastReceiver() {
+      override def onReceive(context: Context, intent: Intent) {
+        val action = intent.getAction
+
+        if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+          val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
+          state match {
+            case BluetoothAdapter.STATE_OFF =>
+              log.info("Bluetooth off")
+            //              stopMonitoring()
+            //              showEnableBlueToothNotification()
+            case BluetoothAdapter.STATE_TURNING_OFF =>
+              log.info("Turning Bluetooth off...")
+              stopMonitoring()
+              showEnableBlueToothNotification()
+            case BluetoothAdapter.STATE_ON =>
+              log.info("Bluetooth on")
+              beaconManager.startMonitoring()
+            case BluetoothAdapter.STATE_TURNING_ON =>
+              log.info("Turning Bluetooth on...")
+            //              beaconManager.startMonitoring()
+          }
+        }
+      }
+    }
+    val filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+    registerReceiver(mReceiver, filter)
+  }
+
+  override def onDestroy() {
+    super.onDestroy()
+    log.debug("onDestroy")
+    if (beaconManager.isConnected) {
+      stopMonitoring()
+    }
+    disableService()
+    timer.cancel()
+  }
+
+  def stopMonitoring(): Unit = {
+    log.debug("monitoring stopped")
+    beaconManager.stopMonitoring()
+  }
+
+  override def onTaskRemoved(rootIntent: Intent) {
+    log.debug("onTaskRemoved")
+    super.onTaskRemoved(rootIntent)
+  }
+
+  @throws(classOf[RemoteException])
+  private def loadInitialData() {
+    if (beaconManager.isBluetoothEnabled && beaconManager.isConnected) {
+      beaconManager.startMonitoring()
+    } else {
+      showEnableBlueToothNotification()
+    }
+  }
+
+  private def scheduleDataRefresh() {
+    timer.schedule(new TimerTask() {
+      def run() {
+        updateBeaconsAndWorksData()
+      }
+    }, 5000, 5000)
+  }
+
+  private def scheduleEnableBT() {
+    timer.schedule(new TimerTask() {
+      def run() {
+        if (!beaconManager.isBluetoothEnabled) {
+          showEnableBlueToothNotification()
+        }
+      }
+    }, 10.seconds.toMillis, 1.hour.toMillis)
+  }
+
+  override def onStartCommand(intent: Intent, flags: Int, startId: Int): Int = {
+    log.debug("onStartCommand")
+    try {
+      scheduleDataRefresh()
+      enableService()
+      scheduleEnableBT()
+    }
+    catch {
+      case e: RemoteException =>
+        e.printStackTrace()
+    }
+    Service.START_STICKY
+  }
+
+  def reloadService(): Unit = {
+    disableService()
+    enableService()
+  }
+
+  def disableService(): Unit = {
+    beaconManager.disconnect()
+    beaconManager = null
+  }
+
+  def enableService(): Unit = {
+    beaconManager = BeaconManager.newInstance(this)
+    beaconManager.setMonitorPeriod(monitoringPeriod)
     beaconManager.setScanMode(BeaconManager.SCAN_MODE_LOW_POWER)
     beaconManager.registerRangingListener(new RangingListener {
       override def onBeaconsDiscovered(venue: Region, beacons: util.List[BeaconDevice]): Unit = {
@@ -163,109 +262,16 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
 
       }
     })
-    registerBTStateMonitor()
-  }
-
-  def registerBTStateMonitor(): Unit = {
-    val mReceiver = new BroadcastReceiver() {
-      override def onReceive(context: Context, intent: Intent) {
-        val action = intent.getAction
-
-        if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
-          val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
-          state match {
-            case BluetoothAdapter.STATE_OFF =>
-              log.info("Bluetooth off")
-            //              stopMonitoring()
-            //              showEnableBlueToothNotification()
-            case BluetoothAdapter.STATE_TURNING_OFF =>
-              log.info("Turning Bluetooth off...")
-              stopMonitoring()
-              showEnableBlueToothNotification()
-            case BluetoothAdapter.STATE_ON =>
-              log.info("Bluetooth on")
-              beaconManager.startMonitoring()
-            case BluetoothAdapter.STATE_TURNING_ON =>
-              log.info("Turning Bluetooth on...")
-            //              beaconManager.startMonitoring()
-          }
+    if (!beaconManager.isConnected) {
+      beaconManager.connect(new OnServiceBoundListener() {
+        @throws(classOf[RemoteException])
+        def onServiceBound() {
+          log.debug("onServiceBound")
+          loadInitialData()
         }
-      }
-    }
-    val filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
-    registerReceiver(mReceiver, filter)
-  }
-
-  override def onDestroy() {
-    super.onDestroy()
-    log.debug("onDestroy")
-    if (beaconManager.isConnected) {
-      stopMonitoring()
-    }
-    beaconManager.disconnect()
-    timer.cancel()
-  }
-
-  def stopMonitoring(): Unit = {
-    log.debug("monitoring stopped")
-    beaconManager.stopMonitoring()
-  }
-
-  override def onTaskRemoved(rootIntent: Intent) {
-    log.debug("onTaskRemoved")
-    super.onTaskRemoved(rootIntent)
-  }
-
-  @throws(classOf[RemoteException])
-  private def loadInitialData() {
-    updateBeaconsAndWorksData()
-    if (beaconManager.isBluetoothEnabled) {
-      beaconManager.startMonitoring()
-    } else {
-      showEnableBlueToothNotification()
+      })
     }
   }
-
-  private def scheduleDataRefresh() {
-    timer.schedule(new TimerTask() {
-      def run() {
-        updateBeaconsAndWorksData()
-      }
-    }, 5000, 5000)
-  }
-
-  private def scheduleEnableBT() {
-    timer.schedule(new TimerTask() {
-      def run() {
-        if (!beaconManager.isBluetoothEnabled) {
-          showEnableBlueToothNotification()
-        }
-      }
-    }, 10.seconds.toMillis, 1.hour.toMillis)
-  }
-
-  override def onStartCommand(intent: Intent, flags: Int, startId: Int): Int = {
-    log.debug("onStartCommand")
-    try {
-      if (!beaconManager.isConnected) {
-        beaconManager.connect(new OnServiceBoundListener() {
-          @throws(classOf[RemoteException])
-          def onServiceBound() {
-            log.debug("onServiceBound")
-            loadInitialData()
-            scheduleDataRefresh()
-          }
-        })
-      }
-      scheduleEnableBT()
-    }
-    catch {
-      case e: RemoteException =>
-        e.printStackTrace()
-    }
-    Service.START_STICKY
-  }
-
 
   def showEnableBlueToothNotification(): Unit = {
     val notificationManager: NotificationManager = getSystemService(Context.NOTIFICATION_SERVICE).asInstanceOf[NotificationManager]

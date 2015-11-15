@@ -20,10 +20,12 @@ object WorksFragment extends FragmentCompanion[HelloFragment] with ViewManaging 
   def newInstance = new WorksFragment
 
   trait Callbacks {
-    def nothing(): Unit
+    def loadWorkDetails(w: Work): Unit
   }
 
   trait AdapterCallbacks {
+    def showDetails(w: Work): Unit
+
     def deleteObject(w: Work): Unit
   }
 
@@ -46,9 +48,15 @@ object WorksFragment extends FragmentCompanion[HelloFragment] with ViewManaging 
       val d = data(position)
       holder.header.setText(d.name)
       holder.subheader.setText(s"determinants: ${d.Determinants.apply.size}")
+      holder.itemView.setOnClickListener(new View.OnClickListener {
+        override def onClick(v: View): Unit = {
+          println(s"short click on item with $data")
+          listener.showDetails(d)
+        }
+      })
       holder.itemView.setOnLongClickListener(new OnLongClickListener {
         override def onLongClick(v: View): Boolean = {
-          println(s"Long clck on item with $data")
+          println(s"Long click on item with $data")
           new Builder(holder.itemView.getContext).setTitle("Really delete?").setPositiveButton("Yes", new OnClickListener {
             override def onClick(dialog: DialogInterface, which: Int): Unit = {
               listener.deleteObject(d)
@@ -131,5 +139,9 @@ class WorksFragment extends SmartFragment with AttachedActivity[Callbacks] with 
   override def deleteObject(w: Work): Unit = {
     w.delete()
     invalidateWorksSet()
+  }
+
+  override def showDetails(w: Work): Unit = {
+    attached.foreach(_.loadWorkDetails(w))
   }
 }

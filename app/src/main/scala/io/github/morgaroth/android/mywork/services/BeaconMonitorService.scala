@@ -13,7 +13,6 @@ import com.kontakt.sdk.android.connection.OnServiceBoundListener
 import com.kontakt.sdk.android.device.{BeaconDevice, Region}
 import com.kontakt.sdk.android.manager.BeaconManager
 import com.kontakt.sdk.android.manager.BeaconManager.{MonitoringListener, RangingListener}
-import io.github.morgaroth.android.mywork.R
 import io.github.morgaroth.android.mywork.activities.MainActivity
 import io.github.morgaroth.android.mywork.logic.BeaconInTheAir
 import io.github.morgaroth.android.mywork.storage.WorkingWithData
@@ -29,6 +28,9 @@ object BeaconMonitorService {
 
   val SpyMonitoringPeriod: MonitorPeriod = new MonitorPeriod(10.seconds.toMillis, 5.minutes.toMillis)
   val ExploreMonitoringPeriod: MonitorPeriod = new MonitorPeriod(60.seconds.toMillis, 5.seconds.toMillis)
+
+  val COMMAND = "command"
+  val userCancelledEnableBT = 1
 
   trait BeaconsListener {
     def onBeacons(bcns: List[BeaconInTheAir])
@@ -118,7 +120,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
     log.debug("onCreate")
     //    beaconManager.setMonitorPeriod(SpyMonitoringPeriod)
     listeners ++= Seq(worksListener)
-    beaconManager.setMonitorPeriod(ExploreMonitoringPeriod)
+    beaconManager.setMonitorPeriod(SpyMonitoringPeriod)
     beaconManager.setScanMode(BeaconManager.SCAN_MODE_LOW_POWER)
     beaconManager.registerRangingListener(new RangingListener {
       override def onBeaconsDiscovered(venue: Region, beacons: util.List[BeaconDevice]): Unit = {
@@ -232,6 +234,16 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
     }, 5000, 5000)
   }
 
+  private def scheduleEnableBT() {
+    timer.schedule(new TimerTask() {
+      def run() {
+        if (!beaconManager.isBluetoothEnabled) {
+          showEnableBlueToothNotification()
+        }
+      }
+    }, 10.seconds.toMillis, 1.hour.toMillis)
+  }
+
   override def onStartCommand(intent: Intent, flags: Int, startId: Int): Int = {
     log.debug("onStartCommand")
     try {
@@ -245,6 +257,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
           }
         })
       }
+      scheduleEnableBT()
     }
     catch {
       case e: RemoteException =>
@@ -258,16 +271,16 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
     val notificationManager: NotificationManager = getSystemService(Context.NOTIFICATION_SERVICE).asInstanceOf[NotificationManager]
     val notificationBuilder: Notification.Builder = new Notification.Builder(BeaconMonitorService.this)
     notificationBuilder.setContentTitle("MyWork app cant work!")
-    notificationBuilder.setContentText("Please enable BlueTooth")
+    notificationBuilder.setContentText("Click to enable Bluetooth")
     notificationBuilder.setSmallIcon(android.R.drawable.ic_dialog_info)
     notificationBuilder.setAutoCancel(true)
     val intent = new Intent(BeaconMonitorService.this, classOf[MainActivity])
     intent.putExtra(MainActivity.COMMAND, MainActivity.REQUEST_CODE_ENABLE_BLUETOOTH)
     intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP)
     pendingIntentCounter += 1
-    val pendingIntentShort: PendingIntent = PendingIntent.getActivity(BeaconMonitorService.this, pendingIntentCounter, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+    val pendingIntent = PendingIntent.getActivity(BeaconMonitorService.this, pendingIntentCounter, intent, PendingIntent.FLAG_UPDATE_CURRENT)
     idCounter += 1
-    notificationBuilder.addAction(R.drawable.abc_btn_check_material, "ENABLE", pendingIntentShort)
+    notificationBuilder.setContentIntent(pendingIntent)
     val notification: Notification = notificationBuilder.build()
     notificationManager.notify(idCounter, notification)
   }

@@ -15,18 +15,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="What You want?" />
+            android:text="@string/What_You_want" />
 
         <Button
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="beacons"
+            android:text="@string/Beacons"
             android:id="@+id/go_beacons" />
 
         <Button
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="WORKS"
+            android:text="@string/Works"
             android:id="@+id/go_works" />
     </LinearLayout>
 

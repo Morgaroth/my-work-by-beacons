@@ -2,6 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:paddingTop="?android:attr/actionBarSize"
     tools:context="io.github.morgaroth.android.mywork.fragments.BeaconsFragment">
 
     <android.support.v7.widget.RecyclerView
@@ -9,7 +10,6 @@
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_gravity="center"
-        android:layout_marginTop="40dp"
         android:scrollbars="vertical" />
 
 </FrameLayout>

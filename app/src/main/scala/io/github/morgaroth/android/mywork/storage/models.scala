@@ -69,7 +69,7 @@ class Work extends ParseObject {
   }
 
   object InWorks {
-    def apply = Option(Work.this.getList[Long](timestamps_field)).map(_.toList).getOrElse(List.empty)
+    def apply() = Option(Work.this.getList[Long](timestamps_field)).map(_.toList).getOrElse(List.empty)
 
     def +=(timestamps: List[Long]): Unit = Work.this.addAll(timestamps_field, timestamps)
 

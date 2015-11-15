@@ -18,7 +18,8 @@ object MainActivity {
 }
 
 class MainActivity extends Activity with smart with SmartFragmentActivity
-with BTFragment.Callbacks with HelloFragment.Callbacks with BeaconsFragment.Callbacks with WorksFragment.Callbacks {
+with BTFragment.Callbacks with HelloFragment.Callbacks with BeaconsFragment.Callbacks with WorksFragment.Callbacks
+with WorkDetailsFragment.Callbacks {
 
   implicit lazy val container = FragmentContainer(R.id.container)
 

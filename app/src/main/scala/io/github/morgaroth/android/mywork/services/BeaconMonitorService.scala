@@ -30,7 +30,8 @@ object BeaconMonitorService {
   val ExploreMonitoringPeriod: MonitorPeriod = new MonitorPeriod(60.seconds.toMillis, 5.seconds.toMillis)
 
   val COMMAND = "command"
-  val userCancelledEnableBT = 1
+  val UserCancelledEnableBT = 1
+  val UserRejectedNotification = 2
 
   trait BeaconsListener {
     def onBeacons(bcns: List[BeaconInTheAir])
@@ -126,18 +127,16 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
           state match {
             case BluetoothAdapter.STATE_OFF =>
               log.info("Bluetooth off")
-            //              stopMonitoring()
-            //              showEnableBlueToothNotification()
             case BluetoothAdapter.STATE_TURNING_OFF =>
               log.info("Turning Bluetooth off...")
               stopMonitoring()
+              log.info("showing notification from bt state listener")
               showEnableBlueToothNotification()
             case BluetoothAdapter.STATE_ON =>
               log.info("Bluetooth on")
               beaconManager.startMonitoring()
             case BluetoothAdapter.STATE_TURNING_ON =>
               log.info("Turning Bluetooth on...")
-            //              beaconManager.startMonitoring()
           }
         }
       }
@@ -171,6 +170,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
     if (beaconManager.isBluetoothEnabled && beaconManager.isConnected) {
       beaconManager.startMonitoring()
     } else {
+      log.info("showing notificatation from load initial data")
       showEnableBlueToothNotification()
     }
   }
@@ -187,6 +187,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
     timer.schedule(new TimerTask() {
       def run() {
         if (!beaconManager.isBluetoothEnabled) {
+          log.info("showing notification from periodical task")
           showEnableBlueToothNotification()
         }
       }
@@ -195,14 +196,19 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
 
   override def onStartCommand(intent: Intent, flags: Int, startId: Int): Int = {
     log.debug("onStartCommand")
-    try {
-      scheduleDataRefresh()
-      enableService()
-      scheduleEnableBT()
-    }
-    catch {
-      case e: RemoteException =>
-        e.printStackTrace()
+    Option(intent.getIntExtra(BeaconMonitorService.COMMAND, -1)).filter(_ != -1) match {
+      case Some(UserRejectedNotification) =>
+
+      case _ =>
+        try {
+          scheduleDataRefresh()
+          enableService()
+          scheduleEnableBT()
+        }
+        catch {
+          case e: RemoteException =>
+            e.printStackTrace()
+        }
     }
     Service.START_STICKY
   }
@@ -273,6 +279,8 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
     }
   }
 
+  var lastNotification: Option[Notification] = _
+
   def showEnableBlueToothNotification(): Unit = {
     val notificationManager: NotificationManager = getSystemService(Context.NOTIFICATION_SERVICE).asInstanceOf[NotificationManager]
     val notificationBuilder: Notification.Builder = new Notification.Builder(BeaconMonitorService.this)
@@ -285,9 +293,10 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
     intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP)
     pendingIntentCounter += 1
     val pendingIntent = PendingIntent.getActivity(BeaconMonitorService.this, pendingIntentCounter, intent, PendingIntent.FLAG_UPDATE_CURRENT)
-    idCounter += 1
     notificationBuilder.setContentIntent(pendingIntent)
     val notification: Notification = notificationBuilder.build()
+    notificationManager.cancel(idCounter)
+    idCounter += 1
     notificationManager.notify(idCounter, notification)
   }
 }

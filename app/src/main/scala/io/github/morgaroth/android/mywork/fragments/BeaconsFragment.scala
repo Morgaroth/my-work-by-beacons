@@ -1,10 +1,10 @@
 package io.github.morgaroth.android.mywork.fragments
 
-import android.app.AlertDialog
 import android.app.AlertDialog.Builder
 import android.content._
 import android.os.{Bundle, IBinder}
 import android.support.v7.widget.{LinearLayoutManager, RecyclerView}
+import android.view.MenuItem.OnMenuItemClickListener
 import android.view.View.OnClickListener
 import android.view._
 import android.widget.Filter.FilterResults
@@ -16,12 +16,12 @@ import io.github.morgaroth.android.mywork.logic.BeaconInTheAir
 import io.github.morgaroth.android.mywork.services.BeaconMonitorService
 import io.github.morgaroth.android.mywork.services.BeaconMonitorService.{BeaconMonitorBinder, BeaconsListener}
 import io.github.morgaroth.android.mywork.storage.{Beacon, Work, WorkingWithData}
-import io.github.morgaroth.android.utilities.fragments.{AttachedActivity, SmartFragment}
-import io.github.morgaroth.android.utilities.{With, fragments}
+import io.github.morgaroth.android.utilities.With
+import io.github.morgaroth.android.utilities.fragments.{AttachedActivity, FragmentCompanion, SmartFragment, ViewManaging}
 
 import scala.language.postfixOps
 
-object BeaconsFragment extends fragments.FragmentCompanion[BeaconsFragment] with fragments.ViewManaging {
+object BeaconsFragment extends FragmentCompanion[BeaconsFragment] with ViewManaging {
   def newInstance = new BeaconsFragment
 
   trait Callbacks
@@ -99,6 +99,26 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
 
   var adapter: Adapter = _
 
+  val beaconsListener: BeaconsListener = new BeaconsListener {
+    override def onBeacons(bcns: List[BeaconInTheAir]): Unit = {
+      log.info(s"beacons on the air $bcns")
+      adapter.setData(bcns.map { bia =>
+        knownBeacons
+          .get(bia.beacon.getUniqueId)
+          .map(x => bia.copy(known = Some(x._2)))
+          .getOrElse(bia)
+      })
+    }
+
+    override def monitoringStarted: Unit = {
+      log.info("started beacons monitoring")
+    }
+
+    override def monitoringStopped: Unit = {
+      log.info("stopped beacons monitoring")
+    }
+  }
+
   val connection = new ServiceConnection {
     override def onServiceDisconnected(name: ComponentName): Unit = {
       log.info(s"service disconnected $name")
@@ -108,32 +128,36 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
       log.info(s"connected to service $name, service $service")
       setHasOptionsMenu(true)
       connectedService = service.asInstanceOf[BeaconMonitorBinder]
-      connectedService.service.addDataListener(new BeaconsListener {
-        override def onBeacons(bcns: List[BeaconInTheAir]): Unit = {
-          log.info(s"beacons on the air $bcns")
-          adapter.setData(bcns.map { bia =>
-            knownBeacons
-              .get(bia.beacon.getUniqueId)
-              .map(x => bia.copy(known = Some(x._2)))
-              .getOrElse(bia)
-          })
-        }
-
-        override def monitoringStarted: Unit = {
-          log.info("started beacons monitoring")
-        }
-
-        override def monitoringStopped: Unit = {
-          log.info("stopped beacons monitoring")
-        }
-      })
     }
   }
 
-
-  override def onOptionsItemSelected(item: MenuItem): Boolean = {
-    item.getItemId match {
-      case R.id.action_search =>
+  override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater): Unit = {
+    val m = menu.add("Start Exploring")
+    m.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+    m.setIcon(android.R.drawable.ic_media_play)
+    m.setOnMenuItemClickListener(new OnMenuItemClickListener {
+      override def onMenuItemClick(item: MenuItem): Boolean = {
+        item.getTitle.toString match {
+          case "Start Exploring" =>
+            item.setIcon(android.R.drawable.ic_media_pause)
+            item.setTitle("End Exploring")
+            onStartExploring()
+            true
+          case "End Exploring" =>
+            m.setIcon(android.R.drawable.ic_media_play)
+            item.setTitle("Start Exploring")
+            onStopExploring()
+            true
+          case _ =>
+            false
+        }
+      }
+    })
+    val m2 = menu.add("Filter")
+    m2.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+    m2.setIcon(android.R.drawable.ic_menu_search)
+    m2.setOnMenuItemClickListener(new OnMenuItemClickListener {
+      override def onMenuItemClick(item: MenuItem): Boolean = {
         log.info("used search menu from fragment")
         val options: Array[CharSequence] = Array[CharSequence]("unknown", "known", "all")
         new Builder(getActivity)
@@ -144,11 +168,8 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
             }
           }).show()
         true
-      case _ => false
-    }
-  }
-
-  override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater): Unit = {
+      }
+    })
     super.onCreateOptionsMenu(menu, inflater)
   }
 
@@ -162,7 +183,7 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
     val e = getActivity.bindService(intent, connection, 0)
     log.info(s"binding service end with $e")
 
-    knownBeacons = loadBeacons(loadWorks)
+    updateBeaconsAndWorksData()
 
     With(inflater.inflate(R.layout.fragment_recycler_view, container, false)) { l =>
       val rv = l.findViewById(R.id.my_recycler_view).asInstanceOf[RecyclerView]
@@ -173,7 +194,6 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
     }
   }
 
-
   override def onDestroyView(): Unit = {
     getActivity.unbindService(connection)
     super.onDestroyView()
@@ -183,9 +203,8 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
 
   override def onItemClick(item: BeaconInTheAir, v: View): Unit = {
     log.info(s"clicked beacon ${item.beacon.getUniqueId}")
-    updateData()
+    updateBeaconsAndWorksData()
     val workNames = works.map(_.name).toArray[CharSequence]
-    val a = new AlertDialog.Builder(getActivity)
     new Builder(getActivity)
       .setItems(workNames, new DialogInterface.OnClickListener {
         override def onClick(dialog: DialogInterface, which: Int): Unit = {
@@ -193,8 +212,16 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
           val work: Work = works.find(_.name == workNames(which)).get
           work.Determinants += Beacon.from(item.beacon)
           work.save()
-          updateData()
+          updateBeaconsAndWorksData()
         }
       }).show()
+  }
+
+  def onStartExploring(): Unit = {
+    connectedService.service.exploreBeacons(beaconsListener)
+  }
+
+  def onStopExploring(): Unit = {
+    connectedService.service.endExploringBeacons(beaconsListener)
   }
 }

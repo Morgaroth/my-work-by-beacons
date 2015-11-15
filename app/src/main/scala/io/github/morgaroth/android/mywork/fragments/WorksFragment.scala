@@ -86,7 +86,7 @@ class WorksFragment extends SmartFragment with AttachedActivity[Callbacks] with 
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater): Unit = {
     val fav = menu.add("add")
-    fav.setIcon(android.R.drawable.btn_plus)
+    fav.setIcon(android.R.drawable.ic_menu_add)
     fav.setVisible(true)
     fav.setOnMenuItemClickListener(new OnMenuItemClickListener {
       override def onMenuItemClick(item: MenuItem): Boolean = {

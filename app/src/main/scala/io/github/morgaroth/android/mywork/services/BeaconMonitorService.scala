@@ -28,7 +28,7 @@ object BeaconMonitorService {
   case class BeaconMonitorBinder(service: BeaconMonitorService) extends Binder
 
   val SpyMonitoringPeriod: MonitorPeriod = new MonitorPeriod(10.seconds.toMillis, 5.minutes.toMillis)
-  val exploreMonitoringPeriod: MonitorPeriod = new MonitorPeriod(60.seconds.toMillis, 5.seconds.toMillis)
+  val ExploreMonitoringPeriod: MonitorPeriod = new MonitorPeriod(60.seconds.toMillis, 5.seconds.toMillis)
 
   trait BeaconsListener {
     def onBeacons(bcns: List[BeaconInTheAir])
@@ -74,14 +74,38 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
     }
   }
 
-
   def isConnectedToBeaconManager: Boolean = {
     beaconManager.isConnected
   }
 
+  def endExploringBeacons(l: BeaconsListener) = {
+    removeDataListener(l)
+    if (isConnectedToBeaconManager) {
+      beaconManager.stopMonitoring()
+      beaconManager.setMonitorPeriod(SpyMonitoringPeriod)
+      beaconManager.startMonitoring()
+    } else {
+      beaconManager.setMonitorPeriod(SpyMonitoringPeriod)
+    }
+  }
+
+  def exploreBeacons(l: BeaconsListener) = {
+    addDataListener(l)
+    if (isConnectedToBeaconManager) {
+      beaconManager.stopMonitoring()
+      beaconManager.setMonitorPeriod(ExploreMonitoringPeriod)
+      beaconManager.startMonitoring()
+    } else {
+      beaconManager.setMonitorPeriod(ExploreMonitoringPeriod)
+    }
+  }
 
   def addDataListener(l: BeaconsListener) = {
     listeners ++= Seq(l)
+  }
+
+  def removeDataListener(l: BeaconsListener) = {
+    listeners = listeners.filter(_ != l)
   }
 
   @Nullable def onBind(intent: Intent): IBinder = {
@@ -94,7 +118,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
     log.debug("onCreate")
     //    beaconManager.setMonitorPeriod(SpyMonitoringPeriod)
     listeners ++= Seq(worksListener)
-    beaconManager.setMonitorPeriod(exploreMonitoringPeriod)
+    beaconManager.setMonitorPeriod(ExploreMonitoringPeriod)
     beaconManager.setScanMode(BeaconManager.SCAN_MODE_LOW_POWER)
     beaconManager.registerRangingListener(new RangingListener {
       override def onBeaconsDiscovered(venue: Region, beacons: util.List[BeaconDevice]): Unit = {
@@ -150,8 +174,8 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
           state match {
             case BluetoothAdapter.STATE_OFF =>
               log.info("Bluetooth off")
-              stopMonitoring()
-              showEnableBlueToothNotification()
+            //              stopMonitoring()
+            //              showEnableBlueToothNotification()
             case BluetoothAdapter.STATE_TURNING_OFF =>
               log.info("Turning Bluetooth off...")
               stopMonitoring()
@@ -192,7 +216,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
 
   @throws(classOf[RemoteException])
   private def loadInitialData() {
-    updateData()
+    updateBeaconsAndWorksData()
     if (beaconManager.isBluetoothEnabled) {
       beaconManager.startMonitoring()
     } else {
@@ -203,7 +227,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
   private def scheduleDataRefresh() {
     timer.schedule(new TimerTask() {
       def run() {
-        updateData()
+        updateBeaconsAndWorksData()
       }
     }, 5000, 5000)
   }
@@ -237,14 +261,14 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
     notificationBuilder.setContentText("Please enable BlueTooth")
     notificationBuilder.setSmallIcon(android.R.drawable.ic_dialog_info)
     notificationBuilder.setAutoCancel(true)
-    val intentShort: Intent = new Intent(BeaconMonitorService.this, classOf[MainActivity])
-    intentShort.putExtra(MainActivity.COMMAND, MainActivity.REQUEST_CODE_ENABLE_BLUETOOTH)
-    intentShort.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    val intent = new Intent(BeaconMonitorService.this, classOf[MainActivity])
+    intent.putExtra(MainActivity.COMMAND, MainActivity.REQUEST_CODE_ENABLE_BLUETOOTH)
+    intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP)
     pendingIntentCounter += 1
-    val pendingIntentShort: PendingIntent = PendingIntent.getActivity(BeaconMonitorService.this, pendingIntentCounter, intentShort, PendingIntent.FLAG_UPDATE_CURRENT)
+    val pendingIntentShort: PendingIntent = PendingIntent.getActivity(BeaconMonitorService.this, pendingIntentCounter, intent, PendingIntent.FLAG_UPDATE_CURRENT)
     idCounter += 1
     notificationBuilder.addAction(R.drawable.abc_btn_check_material, "ENABLE", pendingIntentShort)
-    notificationManager.notify(idCounter, notificationBuilder.build())
-    log.debug("notification started")
+    val notification: Notification = notificationBuilder.build()
+    notificationManager.notify(idCounter, notification)
   }
 }

@@ -42,14 +42,12 @@ with BTFragment.Callbacks with HelloFragment.Callbacks with BeaconsFragment.Call
     true
   }
 
-  override def onOptionsItemSelected(item: MenuItem): Boolean = {
-    val id: Int = item.getItemId
-    if (id == R.id.action_settings) {
-      true
-    } else {
-      super.onOptionsItemSelected(item)
-    }
-  }
+  override def handleOptionsMenuItemSelected = {
+        case R.id.action_load_beacons =>
+          replaceFragment(BeaconsFragment.newInstance)
+        case R.id.action_load_works =>
+          replaceFragment(WorksFragment.newInstance)
+      }
 
   def bindBeaconMonitor = {
     log.info("binding to beaconsmonitor")

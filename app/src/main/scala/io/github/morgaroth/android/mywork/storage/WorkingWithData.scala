@@ -11,7 +11,7 @@ trait WorkingWithData {
 
   var works = List.empty[Work]
 
-  def updateData(): Unit = {
+  def updateBeaconsAndWorksData(): Unit = {
     works = loadWorks
     knownBeacons = loadBeacons(works)
   }

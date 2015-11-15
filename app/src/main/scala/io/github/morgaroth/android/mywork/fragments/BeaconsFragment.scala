@@ -141,12 +141,12 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
           case "Start Exploring" =>
             item.setIcon(android.R.drawable.ic_media_pause)
             item.setTitle("End Exploring")
-            onStartExploring()
+            fireStartExploring()
             true
           case "End Exploring" =>
             m.setIcon(android.R.drawable.ic_media_play)
             item.setTitle("Start Exploring")
-            onStopExploring()
+            fireStopExploring()
             true
           case _ =>
             false
@@ -196,6 +196,9 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
 
   override def onDestroyView(): Unit = {
     getActivity.unbindService(connection)
+    if (exploringStarted) {
+      fireStopExploring()
+    }
     super.onDestroyView()
   }
 
@@ -217,11 +220,15 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
       }).show()
   }
 
-  def onStartExploring(): Unit = {
+  var exploringStarted = false
+
+  def fireStartExploring(): Unit = {
+    exploringStarted = true
     connectedService.service.exploreBeacons(beaconsListener)
   }
 
-  def onStopExploring(): Unit = {
+  def fireStopExploring(): Unit = {
+    exploringStarted = false
     connectedService.service.endExploringBeacons(beaconsListener)
   }
 }

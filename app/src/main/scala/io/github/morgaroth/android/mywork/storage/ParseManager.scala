@@ -20,9 +20,12 @@ object ParseManager {
   def works: Try[List[Work]] = {
     val query = ParseQuery.getQuery(classOf[Work].getSimpleName)
     Try {
-      //      query.include("raum")
-      //      query.include("raum.occupations")
-      //      query.include("raum.occupations.user")
+      query.include("name")
+      query.include("timestamps")
+      query.include("determinants")
+      query.include("determinants.beaconId")
+      query.include("determinants.minor")
+      query.include("determinants.major")
       query.find.toList
     }
   }

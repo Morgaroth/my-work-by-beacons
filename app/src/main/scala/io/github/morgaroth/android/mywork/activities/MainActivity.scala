@@ -13,6 +13,7 @@ import io.github.morgaroth.android.utilities.{BluetoothUtils, FragmentContainer,
 
 object MainActivity {
   val REQUEST_CODE_ENABLE_BLUETOOTH = 1
+  val COMMAND = "command"
 }
 
 class MainActivity extends Activity with smart with SmartFragmentActivity
@@ -72,6 +73,11 @@ with BTFragment.Callbacks with HelloFragment.Callbacks with BeaconsFragment.Call
   protected override def onNewIntent(intent: Intent) = {
     super.onNewIntent(intent)
     log.info(s"onIntent $intent")
+    Option(intent.getIntExtra(MainActivity.COMMAND, -1)).filter(_ != -1).map {
+      case MainActivity.REQUEST_CODE_ENABLE_BLUETOOTH if !BluetoothUtils.isBluetoothEnabled =>
+        replaceFragment(BTFragment.newInstance)
+      case _ =>
+    }
   }
 
   override def wantBeacons(): Unit = {

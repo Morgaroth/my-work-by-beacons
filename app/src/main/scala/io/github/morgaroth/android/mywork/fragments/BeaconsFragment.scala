@@ -1,10 +1,7 @@
 package io.github.morgaroth.android.mywork.fragments
 
-import java.lang.reflect
-
-import android.app.{Dialog, AlertDialog}
+import android.app.AlertDialog
 import android.app.AlertDialog.Builder
-import android.content.DialogInterface.OnMultiChoiceClickListener
 import android.content._
 import android.os.{Bundle, IBinder}
 import android.support.v7.widget.{LinearLayoutManager, RecyclerView}
@@ -14,15 +11,14 @@ import android.widget.Filter.FilterResults
 import android.widget.{Filter, Filterable}
 import com.kontakt.sdk.android.device.BeaconDevice
 import io.github.morgaroth.android.mywork.R
-import io.github.morgaroth.android.mywork.fragments.BeaconsFragment.{OnItemClickListener, Adapter, Callbacks}
+import io.github.morgaroth.android.mywork.fragments.BeaconsFragment.{Adapter, Callbacks, OnItemClickListener}
 import io.github.morgaroth.android.mywork.logic.BeaconInTheAir
 import io.github.morgaroth.android.mywork.services.BeaconMonitorService
 import io.github.morgaroth.android.mywork.services.BeaconMonitorService.{BeaconMonitorBinder, BeaconsListener}
-import io.github.morgaroth.android.mywork.storage.{Work, ParseManager, Beacon}
+import io.github.morgaroth.android.mywork.storage.{Beacon, Work, WorkingWithData}
 import io.github.morgaroth.android.utilities.fragments.{AttachedActivity, SmartFragment}
 import io.github.morgaroth.android.utilities.{With, fragments}
 
-import scala.collection.mutable
 import scala.language.postfixOps
 
 object BeaconsFragment extends fragments.FragmentCompanion[BeaconsFragment] with fragments.ViewManaging {
@@ -97,7 +93,7 @@ object BeaconsFragment extends fragments.FragmentCompanion[BeaconsFragment] with
 }
 
 
-class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] with OnItemClickListener[BeaconInTheAir] {
+class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] with OnItemClickListener[BeaconInTheAir] with WorkingWithData {
 
   var connectedService: BeaconMonitorBinder = _
 
@@ -127,7 +123,7 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
           log.info("started beacons monitoring")
         }
 
-        override def stopMonitoring: Unit = {
+        override def monitoringStopped: Unit = {
           log.info("stopped beacons monitoring")
         }
       })
@@ -156,7 +152,6 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
     super.onCreateOptionsMenu(menu, inflater)
   }
 
-  var knownBeacons = Map.empty[String, (Beacon, Work)]
 
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup, savedInstanceState: Bundle): View = {
     super.onCreateView(inflater, container, savedInstanceState)
@@ -178,21 +173,6 @@ class BeaconsFragment extends SmartFragment with AttachedActivity[Callbacks] wit
     }
   }
 
-
-  def loadBeacons(works: List[Work]): Map[String, (Beacon, Work)] = {
-    works.flatMap(w => w.Determinants.apply.map(b => b.beaconId ->(b, w))) toMap
-  }
-
-  def loadWorks: List[Work] = {
-    ParseManager.works.getOrElse(List.empty)
-  }
-
-  var works = List.empty[Work]
-
-  def updateData(): Unit = {
-    works = loadWorks
-    knownBeacons = loadBeacons(works)
-  }
 
   override def onDestroyView(): Unit = {
     getActivity.unbindService(connection)

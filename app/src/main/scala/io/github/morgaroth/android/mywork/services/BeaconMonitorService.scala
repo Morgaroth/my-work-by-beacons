@@ -4,66 +4,69 @@ import java.util
 import java.util.{Timer, TimerTask}
 
 import android.app.{Notification, NotificationManager, PendingIntent, Service}
-import android.bluetooth.{BluetoothAdapter, BluetoothManager}
-import android.content.{IntentFilter, BroadcastReceiver, Context, Intent}
+import android.bluetooth.BluetoothAdapter
+import android.content.{BroadcastReceiver, Context, Intent, IntentFilter}
 import android.os.{Binder, IBinder, RemoteException}
 import android.support.annotation.Nullable
 import com.kontakt.sdk.android.configuration.MonitorPeriod
 import com.kontakt.sdk.android.connection.OnServiceBoundListener
 import com.kontakt.sdk.android.device.{BeaconDevice, Region}
-import com.kontakt.sdk.android.factory.Filters
-import com.kontakt.sdk.android.manager.{ActionController, BeaconManager}
-import com.kontakt.sdk.android.manager.BeaconManager.{RangingListener, MonitoringListener}
+import com.kontakt.sdk.android.manager.BeaconManager
+import com.kontakt.sdk.android.manager.BeaconManager.{MonitoringListener, RangingListener}
 import io.github.morgaroth.android.mywork.R
 import io.github.morgaroth.android.mywork.activities.MainActivity
 import io.github.morgaroth.android.mywork.logic.BeaconInTheAir
-import io.github.morgaroth.android.mywork.services.BeaconMonitorService.{BeaconMonitorBinder, BeaconsListener}
-import io.github.morgaroth.android.mywork.storage.{ParseManager, Work}
+import io.github.morgaroth.android.mywork.storage.WorkingWithData
 import io.github.morgaroth.android.utilities.{ImplicitContext, logger}
 
+import scala.collection.JavaConversions._
+import scala.compat.Platform
 import scala.concurrent.duration._
-import scala.util.Try
 
 object BeaconMonitorService {
 
   case class BeaconMonitorBinder(service: BeaconMonitorService) extends Binder
+
+  val SpyMonitoringPeriod: MonitorPeriod = new MonitorPeriod(10.seconds.toMillis, 5.minutes.toMillis)
+  val exploreMonitoringPeriod: MonitorPeriod = new MonitorPeriod(60.seconds.toMillis, 5.seconds.toMillis)
 
   trait BeaconsListener {
     def onBeacons(bcns: List[BeaconInTheAir])
 
     def monitoringStarted: Unit
 
-    def stopMonitoring: Unit
+    def monitoringStopped: Unit
   }
 
 }
 
 
-class BeaconMonitorService extends Service with logger with ImplicitContext {
+class BeaconMonitorService extends Service with logger with ImplicitContext with WorkingWithData {
   log.info("beacon monitor service instantiated")
+
+  import BeaconMonitorService._
 
   override implicit def implicitlyVisibleThisAsContext: Context = this
 
   private lazy val beaconManager = BeaconManager.newInstance(this)
   private final val binder: IBinder = BeaconMonitorBinder(this)
   private lazy val timer = new Timer
-
-  private var works = List.empty[Work]
-
-  //  private var enteredBeacons: List[Beacon] = List.empty[Beacon]
+  private var listeners: List[BeaconsListener] = List.empty
   private var idCounter: Int = 0
-
   private var pendingIntentCounter: Int = 0
+  val worksListener = new BeaconsListener {
+    override def monitoringStopped: Unit = {}
 
-  //  private var notificationsMap: Map[Beacon, Integer] = Map.empty[Beacon, Integer]
+    override def monitoringStarted: Unit = {}
 
-  //  def getBeacons: List[Beacon] = {
-  //    beacons
-  //  }
-  //
-  //  def getEnteredBeacons: List[Beacon] = {
-  //    enteredBeacons
-  //  }
+    override def onBeacons(bcns: List[BeaconInTheAir]): Unit = {
+      val now = Platform.currentTime
+      bcns.flatMap(knownBeacons get _.beacon.getUniqueId).map(_._2).groupBy(_.name).mapValues(_.head) mapValues { w =>
+        w.InWorks += now
+        w.save()
+      }
+    }
+  }
 
   class LocalBinder extends Binder {
     def getService: BeaconMonitorService = {
@@ -71,17 +74,6 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
     }
   }
 
-  //  private var rangingListener: BeaconManager.RangingListener = null
-  //  private var monitoringListener: Option[MonitoringListener] = _
-  private var listeners: List[BeaconsListener] = List.empty
-
-  //  def setRangingListener(rangingListener: BeaconManager.RangingListener) {
-  //    this.rangingListener = rangingListener
-  //  }
-  //
-  //  def setMonitoringListener(monitoringListener: MonitoringListener) {
-  //    this.monitoringListener = Some(monitoringListener)
-  //  }
 
   def isConnectedToBeaconManager: Boolean = {
     beaconManager.isConnected
@@ -100,14 +92,9 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
   override def onCreate() {
     super.onCreate()
     log.debug("onCreate")
-
-    //    // ??
-    //    List(4506, 38100, 44830, 17527).foreach { filter =>
-    //      beaconManager.addFilter(Filters.newMajorFilter(filter))
-    //    }
-
-    import scala.collection.JavaConversions._
-    beaconManager.setMonitorPeriod(new MonitorPeriod(60.seconds.toMillis, 10.seconds.toMillis))
+    //    beaconManager.setMonitorPeriod(SpyMonitoringPeriod)
+    listeners ++= Seq(worksListener)
+    beaconManager.setMonitorPeriod(exploreMonitoringPeriod)
     beaconManager.setScanMode(BeaconManager.SCAN_MODE_LOW_POWER)
     beaconManager.registerRangingListener(new RangingListener {
       override def onBeaconsDiscovered(venue: Region, beacons: util.List[BeaconDevice]): Unit = {
@@ -125,90 +112,35 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
 
       def onMonitorStop() {
         log.debug("onMonitorStop")
-        listeners.foreach(_.stopMonitoring)
+        listeners.foreach(_.monitoringStopped)
       }
 
       def onBeaconAppeared(region: Region, beacon: BeaconDevice) {
         log.debug("onBeaconAppeared")
-        //        monitoringListener.foreach(_.onBeaconAppeared(region, beacon))
         listeners.foreach(_.onBeacons(List(BeaconInTheAir(region, beacon))))
       }
 
-      def onBeaconsUpdated(venue: Region, beacons: java.util.List[BeaconDevice]) {
+      def onBeaconsUpdated(venue: Region, beacons: util.List[BeaconDevice]) {
         log.debug("onBeaconsUpdated")
         import scala.collection.JavaConversions._
-        for (beaconDevice <- beacons) {
-          log.debug("\t" + beaconDevice.getUniqueId + " " + beaconDevice.getMajor + " " + beaconDevice.getMinor)
-        }
-        //        monitoringListener.foreach(_.onBeaconsUpdated(venue, beacons))
-        listeners.foreach(_.onBeacons(beacons.map(BeaconInTheAir(venue, _)).toList))
+        val visibleBeacons: List[BeaconInTheAir] = beacons.map(BeaconInTheAir(venue, _)).toList
+        listeners.foreach(_.onBeacons(visibleBeacons))
       }
 
       def onRegionEntered(venue: Region) {
         log.debug("onRegionEntered " + venue.getMajor + " " + venue.getMinor)
-        //          var beacon: Beacon = null
-        //          for (b <- beacons) {
-        //            if (venue.getMajor == b.major && venue.getMinor == b.minor) {
-        //              beacon = b
-        //            }
-        //          }
-        //          if (beacon != null) {
-        //            if (enteredBeacons.contains(beacon)) {
-        //              return
-        //            }
-        //            enteredBeacons.add(beacon)
-        //            dataListener.onBeaconReached(beacon)
-        //                    val intentMedium: Intent = new Intent(BeaconMonitorService.this, classOf[HubActivity])
-        //            intentShort.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        //            intentShort.putExtra(HubActivity.EXTRA_DURATION_KEY, 60)
-        //            intentShort.putExtra(HubActivity.EXTRA_BEACON_ID, beacon.getObjectId)
-        //            val pendingIntentMedium: PendingIntent = PendingIntent.getActivity(BeaconMonitorService.this, ({
-        //              pendingIntentCounter += 1; pendingIntentCounter - 1
-        //            }), intentMedium, PendingIntent.FLAG_UPDATE_CURRENT)
-        //            val intentLong: Intent = new Intent(BeaconMonitorService.this, classOf[HubActivity])
-        //            intentShort.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        //            intentShort.putExtra(HubActivity.EXTRA_DURATION_KEY, 120)
-        //            intentShort.putExtra(HubActivity.EXTRA_BEACON_ID, beacon.getObjectId)
-        //            val pendingIntentLong: PendingIntent = PendingIntent.getActivity(BeaconMonitorService.this, ({
-        //              pendingIntentCounter += 1; pendingIntentCounter - 1
-        //            }), intentLong, PendingIntent.FLAG_UPDATE_CURRENT)
-        //            notificationBuilder.setContentIntent(pendingIntentShort)
-        //            notificationBuilder.addAction(R.drawable.clock, "30m", pendingIntentShort)
-        //            notificationBuilder.addAction(R.drawable.clock, "1h", pendingIntentMedium)
-        //            notificationBuilder.addAction(R.drawable.clock, "2h", pendingIntentLong)
-        //            val notification: Notification = notificationBuilder.build
-        //            notificationsMap.put(beacon, idCounter)
-        //            notificationManager.notify(({
-        //              idCounter += 1; idCounter - 1
-        //            }), notification)
-        //            val raum: Work = beacon.getRaum
-        //            val parseManager: ParseManager = new ParseManager
-        //            parseManager.addOccupationToRaum(raum, null, true)
-        //          }
-        //        monitoringListener.foreach(_.onRegionEntered(venue))
+
       }
 
       def onRegionAbandoned(venue: Region) {
         log.debug("onRegionAbandoned " + venue.getMajor + " " + venue.getMinor)
-        //        var beacon: Beacon = null
-        //        import scala.collection.JavaConversions._
-        //        for (b <- beacons) {
-        //          if (venue.getMajor == b.getMajor && venue.getMinor == b.getMinor) {
-        //            beacon = b
-        //          }
-        //        }
-        //        if (beacon != null) {
-        //          enteredBeacons.remove(beacon)
-        //          val notificationManager: NotificationManager = getSystemService(NOTIFICATION_SERVICE).asInstanceOf[NotificationManager]
-        //          notificationManager.cancel(notificationsMap.get(beacon))
-        //          val raum: Work = beacon.getRaum
-        //          val parseManager: ParseManager = new ParseManager
-        //          parseManager.clearOccupationsFromRaum(raum, true)
-        //        }
-        //        monitoringListener.foreach(_.onRegionAbandoned(venue))
+
       }
     })
-    beaconManager.isBluetoothEnabled
+    registerBTStateMonitor()
+  }
+
+  def registerBTStateMonitor(): Unit = {
     val mReceiver = new BroadcastReceiver() {
       override def onReceive(context: Context, intent: Intent) {
         val action = intent.getAction
@@ -218,17 +150,22 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
           state match {
             case BluetoothAdapter.STATE_OFF =>
               log.info("Bluetooth off")
+              stopMonitoring()
+              showEnableBlueToothNotification()
             case BluetoothAdapter.STATE_TURNING_OFF =>
               log.info("Turning Bluetooth off...")
+              stopMonitoring()
+              showEnableBlueToothNotification()
             case BluetoothAdapter.STATE_ON =>
               log.info("Bluetooth on")
+              beaconManager.startMonitoring()
             case BluetoothAdapter.STATE_TURNING_ON =>
               log.info("Turning Bluetooth on...")
+            //              beaconManager.startMonitoring()
           }
         }
       }
     }
-    // Register for broadcasts on BluetoothAdapter state change
     val filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
     registerReceiver(mReceiver, filter)
   }
@@ -237,10 +174,15 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
     super.onDestroy()
     log.debug("onDestroy")
     if (beaconManager.isConnected) {
-      beaconManager.stopMonitoring()
+      stopMonitoring()
     }
     beaconManager.disconnect()
     timer.cancel()
+  }
+
+  def stopMonitoring(): Unit = {
+    log.debug("monitoring stopped")
+    beaconManager.stopMonitoring()
   }
 
   override def onTaskRemoved(rootIntent: Intent) {
@@ -250,24 +192,18 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
 
   @throws(classOf[RemoteException])
   private def loadInitialData() {
-    works = loadWorks
-    beaconManager.startMonitoring()
-  }
-
-  def loadWorks: List[Work] = {
-    val triedWorks: Try[List[Work]] = ParseManager.works
-    triedWorks.failed.map { t =>
-      //      log.error("loading works failed", t)
+    updateData()
+    if (beaconManager.isBluetoothEnabled) {
+      beaconManager.startMonitoring()
+    } else {
+      showEnableBlueToothNotification()
     }
-    //    log.info(s"loaded works $triedWorks")
-    triedWorks.getOrElse(List.empty)
   }
 
   private def scheduleDataRefresh() {
     timer.schedule(new TimerTask() {
       def run() {
-        //        log.info("running timer shedule")
-        works = loadWorks
+        updateData()
       }
     }, 5000, 5000)
   }
@@ -299,14 +235,16 @@ class BeaconMonitorService extends Service with logger with ImplicitContext {
     val notificationBuilder: Notification.Builder = new Notification.Builder(BeaconMonitorService.this)
     notificationBuilder.setContentTitle("MyWork app cant work!")
     notificationBuilder.setContentText("Please enable BlueTooth")
-    //    notificationBuilder.setSmallIcon(R.drawable.app_icon)
+    notificationBuilder.setSmallIcon(android.R.drawable.ic_dialog_info)
     notificationBuilder.setAutoCancel(true)
     val intentShort: Intent = new Intent(BeaconMonitorService.this, classOf[MainActivity])
+    intentShort.putExtra(MainActivity.COMMAND, MainActivity.REQUEST_CODE_ENABLE_BLUETOOTH)
     intentShort.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP)
     pendingIntentCounter += 1
     val pendingIntentShort: PendingIntent = PendingIntent.getActivity(BeaconMonitorService.this, pendingIntentCounter, intentShort, PendingIntent.FLAG_UPDATE_CURRENT)
     idCounter += 1
     notificationBuilder.addAction(R.drawable.abc_btn_check_material, "ENABLE", pendingIntentShort)
     notificationManager.notify(idCounter, notificationBuilder.build())
+    log.debug("notification started")
   }
 }

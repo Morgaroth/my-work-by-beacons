@@ -1,6 +1,7 @@
 package io.github.morgaroth.android.mywork.storage
 
 import scala.language.postfixOps
+import scala.util.Try
 
 /**
  * Created by mateusz on 15.11.15.
@@ -21,6 +22,10 @@ trait WorkingWithData {
   }
 
   def loadWorks: List[Work] = {
-    ParseManager.works.getOrElse(List.empty)
+    val works1: Try[List[Work]] = ParseManager.works
+    works1.failed.map {
+      t => println(s"loading works end with $t")
+    }
+    works1.getOrElse(List.empty)
   }
 }

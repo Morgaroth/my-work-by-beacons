@@ -19,7 +19,7 @@ object Beacon {
 @ParseClassName("Beacon")
 class Beacon extends ParseObject {
 
-//  fetchIfNeeded()
+  fetchIfNeeded()
 
   def beaconId: String = getString("beaconId")
 

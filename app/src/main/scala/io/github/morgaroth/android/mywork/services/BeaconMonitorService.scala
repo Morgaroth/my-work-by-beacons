@@ -15,7 +15,7 @@ import com.kontakt.sdk.android.manager.BeaconManager
 import com.kontakt.sdk.android.manager.BeaconManager.{MonitoringListener, RangingListener}
 import io.github.morgaroth.android.mywork.activities.MainActivity
 import io.github.morgaroth.android.mywork.logic.BeaconInTheAir
-import io.github.morgaroth.android.mywork.storage.WorkingWithData
+import io.github.morgaroth.android.mywork.storage.{Work, Beacon, WorkingWithData}
 import io.github.morgaroth.android.utilities.{ImplicitContext, logger}
 
 import scala.collection.JavaConversions._
@@ -58,6 +58,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
   private var idCounter: Int = 0
   private var pendingIntentCounter: Int = 0
   private var monitoringPeriod: MonitorPeriod = SpyMonitoringPeriod
+
   val worksListener = new BeaconsListener {
     override def monitoringStopped: Unit = {}
 
@@ -65,9 +66,18 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
 
     override def onBeacons(bcns: List[BeaconInTheAir]): Unit = {
       val now = Platform.currentTime
-      bcns.flatMap(knownBeacons get _.beacon.getUniqueId).map(_._2).groupBy(_.name).mapValues(_.head) mapValues { w =>
-        w.InWorks += now
-        w.save()
+      log.debug(s"checking working hours with beacons ${bcns.map(_.beacon.getUniqueId).toSet} and works ${knownBeacons.keySet}")
+      val visibleBeaconsOfWorks: List[(Beacon, Work)] = bcns.flatMap(knownBeacons get _.beacon.getUniqueId)
+      log.debug(s"known beacons by work: $visibleBeaconsOfWorks")
+      val activeWorks = visibleBeaconsOfWorks.map(_._2).groupBy(_.name).mapValues(_.head).values
+      activeWorks map { w =>
+        log.debug(s"adding work at $now for ${w.name}")
+        try {
+          w.InWorks += now
+          w.save()
+        } catch {
+          case t: Throwable => log.error(s"saving $w", t)
+        }
       }
     }
   }
@@ -115,6 +125,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
     //    beaconManager.setMonitorPeriod(SpyMonitoringPeriod)
     listeners ++= Seq(worksListener)
     registerBTStateMonitor()
+    updateBeaconsAndWorksData()
   }
 
   def registerBTStateMonitor(): Unit = {

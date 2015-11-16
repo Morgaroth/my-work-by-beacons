@@ -30,7 +30,7 @@ object WorkDetailsFragment extends FragmentCompanion[HelloFragment] with ViewMan
 
   class Adapter(var data: List[Long] = List.empty) extends RecyclerView.Adapter[VH] {
     def setData(newData: List[Long]) = {
-      data = newData.sorted.reverse
+      data = newData.sorted
       notifyDataSetChanged()
       newData
     }
@@ -67,6 +67,7 @@ class WorkDetailsFragment(w: Work) extends SmartFragment {
       rv.setHasFixedSize(true)
       rv.setLayoutManager(new LinearLayoutManager(getActivity))
       rv.setAdapter(adapter)
+      l.findText(R.id.header).setText(w.name)
     }
   }
 

@@ -71,7 +71,7 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
       val visibleBeaconsOfWorks: List[(Beacon, Work)] = bcns.flatMap(knownBeacons get _.beacon.getUniqueId)
       val inWorks: Iterable[Work] = visibleBeaconsOfWorks.map(_._2).groupBy(_.name).mapValues(_.head).values
       val activeWorks = inWorks.filter(_.InWorks().lastOption.getOrElse(0l) < notSave)
-      log.debug(s"visible inworks are: $inWorks, but only $activeWorks will be updated")
+      log.debug(s"visible in works are: $inWorks, but only $activeWorks will be updated")
       activeWorks map { w =>
         log.debug(s"adding work at $now for ${w.name}")
         try {

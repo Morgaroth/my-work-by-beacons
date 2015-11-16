@@ -5,7 +5,7 @@ import android.util.Log
 /**
  * Created by mateusz on 31.10.15.
  */
-class MorgarothLogger(name: String) {
+class AndroidLogger(name: String) {
   def v(msg: String) = Log.v(name, msg)
 
   def v(msg: String, t: Throwable) = Log.v(name, msg, t)
@@ -32,5 +32,6 @@ class MorgarothLogger(name: String) {
 }
 
 trait logger {
-  lazy val log = new MorgarothLogger(getClass.getSimpleName)
+  //  lazy val log = new AndroidLogger(getClass.getSimpleName)
+  lazy val log = org.apache.log4j.Logger.getLogger(getClass.getSimpleName)
 }

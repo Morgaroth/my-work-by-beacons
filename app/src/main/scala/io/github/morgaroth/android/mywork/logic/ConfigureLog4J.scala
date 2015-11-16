@@ -16,7 +16,7 @@ object ConfigureLog4J {
       // Set log level of a specific logger
       logConfigurator.setLevel("org.apache", Level.ERROR)
       logConfigurator.configure()
-      logConfigurator.isResetConfiguration
+//      logConfigurator.isResetConfiguration
     } catch {
       case t: Throwable =>
         Log.e("[ConfigureLog4j]", "error during setup file configurator", t)

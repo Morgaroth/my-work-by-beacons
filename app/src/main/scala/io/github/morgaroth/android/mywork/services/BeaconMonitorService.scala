@@ -66,10 +66,12 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
 
     override def onBeacons(bcns: List[BeaconInTheAir]): Unit = {
       val now = Platform.currentTime
+      val notSave = now - 60 * 1000
       log.debug(s"checking working hours with beacons ${bcns.map(_.beacon.getUniqueId).toSet} and works ${knownBeacons.keySet}")
       val visibleBeaconsOfWorks: List[(Beacon, Work)] = bcns.flatMap(knownBeacons get _.beacon.getUniqueId)
-      log.debug(s"known beacons by work: $visibleBeaconsOfWorks")
-      val activeWorks = visibleBeaconsOfWorks.map(_._2).groupBy(_.name).mapValues(_.head).values
+      val inWorks: Iterable[Work] = visibleBeaconsOfWorks.map(_._2).groupBy(_.name).mapValues(_.head).values
+      val activeWorks = inWorks.filter(_.InWorks().lastOption.getOrElse(0l) < notSave)
+      log.debug(s"visible inworks are: $inWorks, but only $activeWorks will be updated")
       activeWorks map { w =>
         log.debug(s"adding work at $now for ${w.name}")
         try {
@@ -207,9 +209,9 @@ class BeaconMonitorService extends Service with logger with ImplicitContext with
 
   override def onStartCommand(intent: Intent, flags: Int, startId: Int): Int = {
     log.debug("onStartCommand")
-    Option(intent.getIntExtra(BeaconMonitorService.COMMAND, -1)).filter(_ != -1) match {
+    Option(intent).map(_.getIntExtra(BeaconMonitorService.COMMAND, -1)).filter(_ != -1) match {
       case Some(UserRejectedNotification) =>
-
+        log.info("user rejected notification")
       case _ =>
         try {
           scheduleDataRefresh()

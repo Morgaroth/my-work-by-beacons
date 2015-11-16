@@ -28,9 +28,11 @@ object WorkDetailsFragment extends FragmentCompanion[HelloFragment] with ViewMan
     val rawDate: TextView = v.findText(R.id.raw)
   }
 
-  class Adapter(var data: List[Long] = List.empty) extends RecyclerView.Adapter[VH] {
+  class Adapter(var initData: List[Long] = List.empty) extends RecyclerView.Adapter[VH] {
+    var data = initData.sorted.reverse
+
     def setData(newData: List[Long]) = {
-      data = newData.sorted
+      data = newData.sorted(Ordering[Long].reverse)
       notifyDataSetChanged()
       newData
     }

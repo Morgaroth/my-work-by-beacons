@@ -72,10 +72,12 @@ class WorkDetailsFragment(w: Work) extends SmartFragment {
       rv.setLayoutManager(new LinearLayoutManager(getActivity))
       rv.setAdapter(adapter)
       l.findText(R.id.header).setText(w.name)
-      l.find[SwipeRefreshLayout](R.id.swipeContainer).setOnRefreshListener(new OnRefreshListener {
+      val swipe: SwipeRefreshLayout = l.find[SwipeRefreshLayout](R.id.swipeContainer)
+      swipe.setOnRefreshListener(new OnRefreshListener {
         override def onRefresh(): Unit = {
           //          w.fetch()
           adapter.setData(w.InWorks())
+          swipe.setRefreshing(false)
         }
       })
       l.findBtn(R.id.walidate).setOnClickListener(() => {

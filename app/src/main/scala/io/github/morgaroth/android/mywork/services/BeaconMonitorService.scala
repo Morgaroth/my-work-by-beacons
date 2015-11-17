@@ -26,7 +26,7 @@ object BeaconMonitorService {
 
   case class BeaconMonitorBinder(service: BeaconMonitorService) extends Binder
 
-  val SpyMonitoringPeriod: MonitorPeriod = new MonitorPeriod(10.seconds.toMillis, 5.minutes.toMillis)
+  val SpyMonitoringPeriod: MonitorPeriod = new MonitorPeriod(10.seconds.toMillis, 3.minutes.toMillis)
   val ExploreMonitoringPeriod: MonitorPeriod = new MonitorPeriod(60.seconds.toMillis, 5.seconds.toMillis)
 
   val COMMAND = "command"

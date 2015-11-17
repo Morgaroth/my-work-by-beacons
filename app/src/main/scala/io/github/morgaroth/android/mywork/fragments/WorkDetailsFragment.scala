@@ -5,6 +5,8 @@ import java.util.{TimeZone, Date, Calendar}
 
 import android.content.Context
 import android.os.Bundle
+import android.support.v4.widget.SwipeRefreshLayout
+import android.support.v4.widget.SwipeRefreshLayout.OnRefreshListener
 import android.support.v7.widget.{LinearLayoutManager, RecyclerView}
 import android.view.{LayoutInflater, View, ViewGroup}
 import android.widget.TextView
@@ -70,6 +72,20 @@ class WorkDetailsFragment(w: Work) extends SmartFragment {
       rv.setLayoutManager(new LinearLayoutManager(getActivity))
       rv.setAdapter(adapter)
       l.findText(R.id.header).setText(w.name)
+      l.find[SwipeRefreshLayout](R.id.swipeContainer).setOnRefreshListener(new OnRefreshListener {
+        override def onRefresh(): Unit = {
+          //          w.fetch()
+          adapter.setData(w.InWorks())
+        }
+      })
+      l.findBtn(R.id.walidate).setOnClickListener(() => {
+        val validated = w.InWorks().map(r => (r / 60000, r)).groupBy(_._1).mapValues(_.map(_._2)).mapValues { usages =>
+          usages.sorted.apply(usages.length / 2)
+        }.values
+        w.InWorks.dropAll()
+        w.InWorks += validated.toList
+        adapter.setData(w.InWorks())
+      })
     }
   }
 

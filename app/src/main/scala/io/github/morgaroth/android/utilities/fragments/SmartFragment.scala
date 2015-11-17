@@ -15,6 +15,10 @@ class ViewFactory(v: View) {
   def findBtn(id: Int) = v.findViewById(id).asInstanceOf[Button]
 
   def findText(id: Int) = v.findViewById(id).asInstanceOf[TextView]
+
+  def findView(id: Int) = v.findViewById(id)
+
+  def find[T: Manifest](id: Int) = v.findViewById(id).asInstanceOf[T]
 }
 
 trait ViewManaging {

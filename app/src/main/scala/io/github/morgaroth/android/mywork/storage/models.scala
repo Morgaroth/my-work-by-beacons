@@ -74,6 +74,8 @@ class Work extends ParseObject {
     def +=(timestamps: List[Long]): Unit = Work.this.addAll(timestamps_field, timestamps)
 
     def +=(timestamp: Long): Unit = this += List(timestamp)
+
+    def dropAll() = Work.this.remove(timestamps_field)
   }
 
   object Determinants {

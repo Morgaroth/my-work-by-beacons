@@ -40,7 +40,7 @@ object WorkDetailsFragment extends FragmentCompanion[HelloFragment] with ViewMan
     }
 
     val cal = Calendar.getInstance()
-    val formatter = new SimpleDateFormat("hh:mm dd/MM/yyyy a")
+    val formatter = new SimpleDateFormat("hh:mma dd/MM/yyyy")
     formatter.setTimeZone(TimeZone.getTimeZone("Poland"))
 
     def getDate(time: Long) = formatter.format(new Date(time))
@@ -84,6 +84,7 @@ class WorkDetailsFragment(w: Work) extends SmartFragment {
         }.values
         w.InWorks.dropAll()
         w.InWorks += validated.toList
+        w.save()
         adapter.setData(w.InWorks())
       })
     }
